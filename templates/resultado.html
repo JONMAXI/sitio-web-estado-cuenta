@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Resultado Estado de Cuenta</title>
+
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <style>
+    body {
+      background-color: #f8f9fa;
+    }
+    .logo {
+      max-height: 60px;
+    }
+    .header-bar {
+      background-color: white;
+      padding: 1rem 2rem;
+      box-shadow: 0 0 10px rgba(0,0,0,0.05);
+    }
+    .table-container {
+      background: white;
+      border-radius: 8px;
+      padding: 2rem;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      margin-top: 2rem;
+    }
+    .btn-custom {
+      background-color: #0d6efd;
+      color: white;
+      font-weight: 500;
+    }
+    .btn-custom:hover {
+      background-color: #084298;
+    }
+    h5.section-title {
+      margin-top: 2rem;
+      color: #495057;
+    }
+  </style>
+</head>
+<body>
+
+<div class="header-bar d-flex justify-content-between align-items-center">
+  <div class="d-flex align-items-center">
+    <img src="https://maxikash.mx/cdn/shop/files/Logotipo-Maxikash-Outline.png?v=1749328460" alt="Logo" class="logo me-3">
+    <h5 class="mb-0 text-secondary">Resultado de Estado de Cuenta</h5>
+  </div>
+  {% if session.get('user') %}
+  <div class="text-end">
+    <small class="text-secondary">
+      Bienvenido, <strong>{{ session['user']['nombre'] }}</strong> – {{ session['user']['puesto'] }} ({{ session['user']['grupo'] }})
+    </small>
+  </div>
+{% endif %}
+
+</div>
+
+<div class="container table-container">
+
+  {% if error %}
+    <div class="alert alert-danger">
+      <strong>Error:</strong> {{ error }} <br/>
+      Código HTTP: {{ http }}
+    </div>
+    <a href="/" class="btn btn-secondary mt-3">Volver</a>
+  {% else %}
+<div class="d-flex justify-content-end mt-4">
+      <a href="/" class="btn btn-custom">Nueva Consulta</a>
+    </div>
+
+
+    <!-- Datos generales -->
+    <h5 class="section-title">Datos Generales</h5>
+    <div class="table-responsive">
+      <table class="table table-bordered table-striped text-center align-middle">
+        <thead class="table-dark">
+          <tr>
+            <th>ID Crédito</th>
+            <th>Cuota</th>
+            <th>Monto Otorgado</th>
+            <th>Fecha Inicio</th>
+            <th>Primer Vencimiento</th>
+            <th>Último Vencimiento</th>
+            <th>Status Crédito</th>
+
+            <th>Referencia STP</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>{{ datos.idCredito }}</td>
+            <td>{{ datos.cuota }}</td>
+            <td>${{ "{:,.2f}".format(datos.montoOtorgado) }}</td>
+
+            <td>{{ datos.fechaInicio }}</td>
+            <td>{{ datos.primerVencimiento }}</td>
+            <td>{{ datos.ultimoVencimiento }}</td>
+            <td>{{ datos.statusCredito }}</td>
+
+            <td>{{ datos.referenciaSTP }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Datos del cliente -->
+    <h5 class="section-title">Datos del Cliente</h5>
+    <table class="table table-bordered table-striped text-center align-middle">
+      <thead class="table-dark">
+        <tr>
+          <th>Nombre</th>
+          <th>ID Cliente</th>
+          <th>Género</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>{{ datos.datosCliente.nombreCliente }}</td>
+          <td>{{ datos.datosCliente.idCliente }}</td>
+          <td>{{ datos.datosCliente.genero }}</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- Tabla de cargos -->
+    {% if datos.datosCargos %}
+    <h5 class="section-title">Cargos</h5>
+    <div class="table-responsive">
+      <table class="table table-bordered table-striped text-center align-middle">
+        <thead class="table-dark">
+          <tr>
+            <th>ID Cargo</th>
+            <th>Fecha Vencimiento</th>
+            <th>Fecha Movimiento</th>
+            <th>Anticipado</th>
+            <th>Monto</th>
+            <th>Capital</th>
+            <th>Interés</th>
+            <th>Comisión</th>
+            <th>Extemporáneos</th>
+
+            <th>Concepto</th>
+
+          </tr>
+        </thead>
+        <tbody>
+          {% for cargo in datos.datosCargos %}
+          <tr>
+            <td>{{ cargo.idCargo }}</td>
+            <td>{{ cargo.fechaVencimiento }}</td>
+            <td>{{ cargo.fechaMovimiento }}</td>
+            <td>{{ cargo.vecimientoAnticipado }}</td>
+            <td>{{ cargo.monto }}</td>
+            <td>{{ cargo.capital }}</td>
+            <td>{{ cargo.interes }}</td>
+            <td>{{ cargo.comision }}</td>
+            <td>{{ cargo.extemporaneos }}</td>
+            <td>{{ cargo.concepto }}</td>
+
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+
+    <!-- Notas de cargos -->
+    {% if datos.datosNotasCargos %}
+    <h5 class="section-title">Notas de Cargos</h5>
+    <div class="table-responsive">
+      <table class="table table-bordered table-striped text-center align-middle">
+        <thead class="table-dark">
+          <tr>
+            {% for key in datos.datosNotasCargos[0].keys() %}
+              <th>{{ key }}</th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for nota in datos.datosNotasCargos %}
+          <tr>
+            {% for value in nota.values() %}
+              <td>{{ value }}</td>
+            {% endfor %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+
+    <!-- Notas de crédito -->
+    {% if datos.datosNotasCreditos %}
+    <h5 class="section-title">Notas de Créditos</h5>
+    <div class="table-responsive">
+      <table class="table table-bordered table-striped text-center align-middle">
+        <thead class="table-dark">
+          <tr>
+            {% for key in datos.datosNotasCreditos[0].keys() %}
+              <th>{{ key }}</th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for nota in datos.datosNotasCreditos %}
+          <tr>
+            {% for value in nota.values() %}
+              <td>{{ value }}</td>
+            {% endfor %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+
+    <div class="d-flex justify-content-end mt-4">
+      <a href="/" class="btn btn-custom">Nueva Consulta</a>
+    </div>
+
+  {% endif %}
+
+</div>
+<!-- Botón flotante para ir al final -->
+<button id="scrollBottomBtn" class="btn btn-secondary rounded-circle" style="position: fixed; bottom: 30px; right: 30px; width: 50px; height: 50px; z-index: 1000;">
+  ⬇️
+</button>
+
+<!-- Script para el botón -->
+<script>
+  document.getElementById("scrollBottomBtn").addEventListener("click", function() {
+    window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+  });
+</script>
+
+<!-- Botón flotante para ir arriba -->
+<button id="scrollTopBtn" class="btn btn-secondary rounded-circle" style="position: fixed; bottom: 90px; right: 30px; width: 50px; height: 50px; z-index: 1000;">
+  ⬆️
+</button>
+
+<!-- Script para los botones de scroll -->
+<script>
+  document.getElementById("scrollBottomBtn").addEventListener("click", function () {
+    window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+  });
+
+  document.getElementById("scrollTopBtn").addEventListener("click", function () {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+</script>
+
+
+
+</body>
+</html>
