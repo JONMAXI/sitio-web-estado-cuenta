@@ -95,10 +95,6 @@ def index():
     fecha_actual_iso = datetime.now().strftime("%Y-%m-%d")
     return render_template("index.html", fecha_actual_iso=fecha_actual_iso)
 
-if __name__ == '__main__':
-    app.run(debug=True)
-
-
 
 if __name__ == "__main__":
     import os
