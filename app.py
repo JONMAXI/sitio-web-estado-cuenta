@@ -3,23 +3,27 @@ import mysql.connector
 import requests
 from datetime import datetime
 import hashlib
+import os
 
 app = Flask(__name__)
 app.secret_key = 'clave_super_secreta'  # cámbiala por seguridad
 
-# Configuración MySQL
+# ------------------ CONFIGURACIÓN BASE DE DATOS ------------------
+
 db_config = {
-    'host': '34.9.147.5',
-    'user': 'jonathan',
-    'password': ')1>SbilQ,$VKr=hO',
-    'database': 'estado_cuenta'
+    'user': os.environ['DB_USER'],
+    'password': os.environ['DB_PASSWORD'],
+    'database': os.environ['DB_NAME'],
+    'unix_socket': f"/cloudsql/{os.environ['DB_CONNECTION_NAME']}"
 }
 
-# Configuración de la API externa
+# ------------------ CONFIGURACIÓN API EXTERNA ------------------
+
 TOKEN = "3oJVoAHtwWn7oBT4o340gFkvq9uWRRmpFo7p"
 ENDPOINT = "https://servicios.s2movil.net/s2maxikash/estadocuenta"
 
 # ------------------ LOGIN ------------------
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -54,6 +58,7 @@ def logout():
     return redirect('/login')
 
 # ------------------ CONSULTA ------------------
+
 @app.route('/', methods=['GET', 'POST'])
 def index():
     if 'usuario' not in session:
@@ -95,8 +100,8 @@ def index():
     fecha_actual_iso = datetime.now().strftime("%Y-%m-%d")
     return render_template("index.html", fecha_actual_iso=fecha_actual_iso)
 
+# ------------------ APP ------------------
 
 if __name__ == "__main__":
-    import os
     port = int(os.environ.get("PORT", 8080))
     app.run(host="0.0.0.0", port=port)
