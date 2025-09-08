@@ -118,11 +118,10 @@
       </tbody>
     </table>
 
-   <!-- Tabla de pagos -->
-{% if datos.datosPagos %}
-<h5 class="section-title">Pagos</h5>
-<div class="table-responsive">
-  <table class="table table-bordered table-striped text-center align-middle">
+  <!-- ================= TABLA DE PAGOS ================= -->
+<div class="table-responsive mt-4">
+  <h4>Pagos</h4>
+  <table class="table table-bordered table-striped table-hover">
     <thead class="table-dark">
       <tr>
         <th>ID Pago</th>
@@ -130,6 +129,13 @@
         <th>Fecha Depósito</th>
         <th>Fecha Registro</th>
         <th>Monto Pago</th>
+        <th>Capital</th>
+        <th>Interés</th>
+        <th>Comisión</th>
+        <th>Moratorios</th>
+        <th>Extemporáneos</th>
+        <th>Cuota Semanal</th>
+        <th>Estatus Pago</th> <!-- NUEVA COLUMNA -->
       </tr>
     </thead>
     <tbody>
@@ -140,7 +146,13 @@
         <td>{{ pago.fechaDeposito }}</td>
         <td>{{ pago.fechaRegistro }}</td>
         <td>${{ "{:,.2f}".format(pago.montoPago) }}</td>
-	 <td>
+        <td>{{ pago.capital }}</td>
+        <td>{{ pago.interes }}</td>
+        <td>{{ pago.comision }}</td>
+        <td>{{ pago.moratorios }}</td>
+        <td>{{ pago.extemporaneos }}</td>
+        <td>{{ pago.numeroCuotaSemanal }}</td>
+        <td>
           {% if "Atraso" in pago.estatusPago %}
             <span class="badge bg-danger">{{ pago.estatusPago }}</span>
           {% elif pago.estatusPago == "Puntual" %}
@@ -154,7 +166,7 @@
     </tbody>
   </table>
 </div>
-{% endif %}
+
 
     <!-- Notas de cargos -->
     {% if datos.datosNotasCargos %}

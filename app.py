@@ -86,7 +86,7 @@ def index():
 
         res = requests.post(ENDPOINT, json=payload, headers=headers)
 
-       try:
+        try:
             data = res.json()
         except Exception:
             return render_template("resultado.html", error="Respuesta no válida del servidor", http=res.status_code)
@@ -94,7 +94,7 @@ def index():
         if res.status_code == 200 and "estadoCuenta" in data:
             estado_cuenta = data["estadoCuenta"]
 
-            # 👉 Aquí agregamos la lógica de estatusPago
+            # 👉 Lógica de estatusPago
             for pago in estado_cuenta.get("datosPagos", []):
                 try:
                     fecha_valor = datetime.strptime(pago["fechaValor"], "%Y-%m-%d")
