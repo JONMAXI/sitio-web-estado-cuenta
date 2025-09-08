@@ -140,13 +140,15 @@
         <td>{{ pago.fechaDeposito }}</td>
         <td>{{ pago.fechaRegistro }}</td>
         <td>${{ "{:,.2f}".format(pago.montoPago) }}</td>
-	<td>
-  		{% if "Atraso" in pago.estatusPago %}
-    		<span class="badge bg-danger">{{ pago.estatusPago }}</span>
-  		{% else %}
-    		<span class="badge bg-success">{{ pago.estatusPago }}</span>
-  		{% endif %}
-	</td>
+	 <td>
+          {% if "Atraso" in pago.estatusPago %}
+            <span class="badge bg-danger">{{ pago.estatusPago }}</span>
+          {% elif pago.estatusPago == "Puntual" %}
+            <span class="badge bg-success">{{ pago.estatusPago }}</span>
+          {% else %}
+            <span class="badge bg-secondary">{{ pago.estatusPago }}</span>
+          {% endif %}
+        </td>
       </tr>
       {% endfor %}
     </tbody>
