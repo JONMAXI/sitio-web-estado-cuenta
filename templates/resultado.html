@@ -125,7 +125,40 @@
       </tbody>
     </table>
  
-
+<!-- ================= TABLA DE MOVIMIENTOS ================= -->
+<h5 class="section-title">Estado de Cuenta</h5>
+<div class="table-responsive">
+  <table class="table table-bordered table-striped table-hover text-center align-middle">
+    <thead class="table-dark">
+      <tr>
+        <th>Fecha</th>
+        <th>Concepto</th>
+        <th>Cargo</th>
+        <th>Abono</th>
+        <th>Saldo</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for mov in datos.movimientos %}
+      <tr>
+        <td>{{ mov.fecha }}</td>
+        <td>{{ mov.concepto }}</td>
+        <td>
+          {% if mov.cargo %}
+            ${{ "{:,.2f}".format(mov.cargo) }}
+          {% endif %}
+        </td>
+        <td>
+          {% if mov.abono %}
+            ${{ "{:,.2f}".format(mov.abono) }}
+          {% endif %}
+        </td>
+        <td>${{ "{:,.2f}".format(mov.saldo) }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
 
   <!-- ================= TABLA DE PAGOS ================= -->
 <div class="table-responsive mt-4">

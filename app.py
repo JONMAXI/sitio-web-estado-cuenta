@@ -111,7 +111,36 @@ def index():
                 else:
                     pago["estatusPago"] = "No disponible"
 
-            return render_template("resultado.html", datos=estado_cuenta)
+            # 👉 Construir movimientos (cargos + abonos)
+            movimientos = []
+            # Cargos = cuotas semanales
+            for c in estado_cuenta.get("datosCargos", []):
+                movimientos.append({
+                    "fecha": c.get("fechaMovimiento") or c.get("fechaVencimiento"),
+                    "concepto": c.get("concepto"),
+                    "cargo": float(c.get("monto", 0)),
+                    "abono": 0.0
+                })
+            # Pagos
+            for p in estado_cuenta.get("datosPagos", []):
+                movimientos.append({
+                    "fecha": p.get("fechaDeposito") or p.get("fechaValor"),
+                    "concepto": f"Pago cuota(s) {p['numeroCuotaSemanal']}",
+                    "cargo": 0.0,
+                    "abono": float(p.get("montoPago", 0))
+                })
+
+            # Ordenar por fecha
+            movimientos.sort(key=lambda x: x["fecha"])
+
+            # Calcular saldo acumulado partiendo del monto otorgado
+            saldo = estado_cuenta.get("montoOtorgado", 0)
+            for m in movimientos:
+                saldo += m["cargo"] - m["abono"]
+                m["saldo"] = saldo
+
+            return render_template("resultado.html", datos=estado_cuenta, movimientos=movimientos)
+
         else:
             mensaje = data.get("mensaje", ["Error desconocido"])[0]
             return render_template("resultado.html", error=mensaje, http=res.status_code)
