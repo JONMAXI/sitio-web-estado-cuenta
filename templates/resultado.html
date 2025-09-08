@@ -103,6 +103,7 @@
       </table>
     </div>
 
+
     <!-- Datos del cliente -->
     <h5 class="section-title">Datos del Cliente</h5>
     <table class="table table-bordered table-striped text-center align-middle">
@@ -116,8 +117,6 @@
       <tbody>
         <tr>
           <td>{{ datos.datosCliente.nombreCliente }}</td>
-          <td>{{ datos.datosCliente.idCliente }}</td>
-          <td>{{ datos.datosCliente.genero }}</td>
         </tr>
       </tbody>
     </table>
@@ -150,12 +149,6 @@
         <td>{{ pago.fechaDeposito }}</td>
         <td>{{ pago.fechaRegistro }}</td>
         <td>${{ "{:,.2f}".format(pago.montoPago) }}</td>
-        <td>{{ pago.capital }}</td>
-        <td>{{ pago.interes }}</td>
-        <td>{{ pago.comision }}</td>
-        <td>{{ pago.moratorios }}</td>
-        <td>{{ pago.extemporaneos }}</td>
-        <td>{{ pago.numeroCuotaSemanal }}</td>
       </tr>
       {% endfor %}
     </tbody>
