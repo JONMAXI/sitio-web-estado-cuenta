@@ -86,13 +86,32 @@ def index():
 
         res = requests.post(ENDPOINT, json=payload, headers=headers)
 
-        try:
+       try:
             data = res.json()
         except Exception:
             return render_template("resultado.html", error="Respuesta no válida del servidor", http=res.status_code)
 
         if res.status_code == 200 and "estadoCuenta" in data:
-            return render_template("resultado.html", datos=data["estadoCuenta"])
+            estado_cuenta = data["estadoCuenta"]
+
+            # 👉 Aquí agregamos la lógica de estatusPago
+            for pago in estado_cuenta.get("datosPagos", []):
+                try:
+                    fecha_valor = datetime.strptime(pago["fechaValor"], "%Y-%m-%d")
+                    fecha_registro = datetime.strptime(pago["fechaRegistro"], "%Y-%m-%d %H:%M:%S")
+                    dias_atraso = (fecha_registro.date() - fecha_valor.date()).days
+                except Exception:
+                    dias_atraso = None
+
+                if dias_atraso is not None:
+                    if dias_atraso <= 0:
+                        pago["estatusPago"] = "Puntual"
+                    else:
+                        pago["estatusPago"] = f"Atraso de {dias_atraso} días"
+                else:
+                    pago["estatusPago"] = "No disponible"
+
+            return render_template("resultado.html", datos=estado_cuenta)
         else:
             mensaje = data.get("mensaje", ["Error desconocido"])[0]
             return render_template("resultado.html", error=mensaje, http=res.status_code)
