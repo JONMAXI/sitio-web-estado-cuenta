@@ -126,15 +126,8 @@
       <tr>
         <th>ID Pago</th>
         <th>Fecha Valor</th>
-        <th>Fecha Depósito</th>
         <th>Fecha Registro</th>
         <th>Monto Pago</th>
-        <th>Capital</th>
-        <th>Interés</th>
-        <th>Comisión</th>
-        <th>Moratorios</th>
-        <th>Extemporáneos</th>
-        <th>Cuota Semanal</th>
         <th>Estatus Pago</th> <!-- NUEVA COLUMNA -->
       </tr>
     </thead>
@@ -143,15 +136,8 @@
       <tr>
         <td>{{ pago.idPago }}</td>
         <td>{{ pago.fechaValor }}</td>
-        <td>{{ pago.fechaDeposito }}</td>
         <td>{{ pago.fechaRegistro }}</td>
         <td>${{ "{:,.2f}".format(pago.montoPago) }}</td>
-        <td>{{ pago.capital }}</td>
-        <td>{{ pago.interes }}</td>
-        <td>{{ pago.comision }}</td>
-        <td>{{ pago.moratorios }}</td>
-        <td>{{ pago.extemporaneos }}</td>
-        <td>{{ pago.numeroCuotaSemanal }}</td>
         <td>
           {% if "Atraso" in pago.estatusPago %}
             <span class="badge bg-danger">{{ pago.estatusPago }}</span>
