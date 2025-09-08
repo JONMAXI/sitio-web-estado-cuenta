@@ -122,41 +122,46 @@
       </tbody>
     </table>
 
-    <!-- Tabla de cargos -->
-    {% if datos.datosCargos %}
-    <h5 class="section-title">Cargos</h5>
-    <div class="table-responsive">
-      <table class="table table-bordered table-striped text-center align-middle">
-        <thead class="table-dark">
-          <tr>
-            <th>ID Cargo</th>
-            <th>Fecha Vencimiento</th>
-            <th>Fecha Movimiento</th>
-            <th>Anticipado</th>
-            <th>Monto</th>
-            <th>Extemporáneos</th>
-
-            <th>Concepto</th>
-
-          </tr>
-        </thead>
-        <tbody>
-          {% for cargo in datos.datosCargos %}
-          <tr>
-            <td>{{ cargo.idCargo }}</td>
-            <td>{{ cargo.fechaVencimiento }}</td>
-            <td>{{ cargo.fechaMovimiento }}</td>
-            <td>{{ cargo.vecimientoAnticipado }}</td>
-            <td>{{ cargo.monto }}</td>
-            <td>{{ cargo.extemporaneos }}</td>
-            <td>{{ cargo.concepto }}</td>
-
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-    {% endif %}
+   <!-- Tabla de pagos -->
+{% if datos.datosPagos %}
+<h5 class="section-title">Pagos</h5>
+<div class="table-responsive">
+  <table class="table table-bordered table-striped text-center align-middle">
+    <thead class="table-dark">
+      <tr>
+        <th>ID Pago</th>
+        <th>Fecha Valor</th>
+        <th>Fecha Depósito</th>
+        <th>Fecha Registro</th>
+        <th>Monto Pago</th>
+        <th>Capital</th>
+        <th>Interés</th>
+        <th>Comisión</th>
+        <th>Moratorios</th>
+        <th>Extemporáneos</th>
+        <th>Cuota Semanal</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for pago in datos.datosPagos %}
+      <tr>
+        <td>{{ pago.idPago }}</td>
+        <td>{{ pago.fechaValor }}</td>
+        <td>{{ pago.fechaDeposito }}</td>
+        <td>{{ pago.fechaRegistro }}</td>
+        <td>${{ "{:,.2f}".format(pago.montoPago) }}</td>
+        <td>{{ pago.capital }}</td>
+        <td>{{ pago.interes }}</td>
+        <td>{{ pago.comision }}</td>
+        <td>{{ pago.moratorios }}</td>
+        <td>{{ pago.extemporaneos }}</td>
+        <td>{{ pago.numeroCuotaSemanal }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
 
     <!-- Notas de cargos -->
     {% if datos.datosNotasCargos %}
