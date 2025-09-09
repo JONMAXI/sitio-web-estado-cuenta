@@ -137,7 +137,8 @@
         <thead class="table-dark">
           <tr>
             <th>Número de Cuota</th>
-            <th>Pagos (ID – Fecha – Monto aplicado)</th>
+	    <th>Fecha Valor</th>
+            <th>Pagos (ID – Fecha Registro – Monto aplicado)</th>
             <th>Monto del Pago</th>
             <th>Total Aplicado</th>
             <th>Excedente</th>
@@ -152,8 +153,18 @@
               <ul class="list-unstyled mb-0">
                 {% for pago in pagos %}
                   <li>
+                    <strong>Fecha:</strong> {{ pago.fecha }} 
+                  </li>
+                {% endfor %}
+              </ul>
+            </td>
+
+            <td>
+              <ul class="list-unstyled mb-0">
+                {% for pago in pagos %}
+                  <li>
                     <strong>ID:</strong> {{ pago.idPago }} – 
-                    <strong>Fecha:</strong> {{ pago.fecha }} – 
+                    <strong>Fecha:</strong> {{ pago.fechaRegistro }} – 
                     <strong>Aplicado:</strong> ${{ "{:,.2f}".format(pago.aplicado) }}
                   </li>
                 {% endfor %}

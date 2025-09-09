@@ -111,6 +111,7 @@ def index():
                     pago_dict = {
                         "idPago": pago.get("idPago"),
                         "fecha": pago.get("fechaValor") or "",
+                        "fechaRegistro": pago.get("FechaRegistro") or "",
                         "monto_pago": float(pago.get("montoPago", 0)),   # ✅ corregida la indentación
                         "montoPago_original": pago.get("montoPago"),     # 👈 valor puro del JSON
                         "aplicado": aplicado,
