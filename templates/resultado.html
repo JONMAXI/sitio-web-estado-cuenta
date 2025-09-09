@@ -45,14 +45,13 @@
     <img src="https://maxikash.mx/cdn/shop/files/Logotipo-Maxikash-Outline.png?v=1749328460" alt="Logo" class="logo me-3">
     <h5 class="mb-0 text-secondary">Resultado de Estado de Cuenta</h5>
   </div>
-  {% if session.get('user') %}
+  {% if session.get('usuario') %}
   <div class="text-end">
     <small class="text-secondary">
-      Bienvenido, <strong>{{ session['user']['nombre'] }}</strong> – {{ session['user']['puesto'] }} ({{ session['user']['grupo'] }})
+      Bienvenido, <strong>{{ session['usuario']['nombre_completo'] }}</strong> – {{ session['usuario']['puesto'] }} ({{ session['usuario']['grupo'] }})
     </small>
   </div>
-{% endif %}
-
+  {% endif %}
 </div>
 
 <div class="container table-container">
@@ -64,10 +63,9 @@
     </div>
     <a href="/" class="btn btn-secondary mt-3">Volver</a>
   {% else %}
-<div class="d-flex justify-content-end mt-4">
+    <div class="d-flex justify-content-end mt-4">
       <a href="/" class="btn btn-custom">Nueva Consulta</a>
     </div>
-
 
     <!-- Datos generales -->
     <h5 class="section-title">Datos Generales</h5>
@@ -82,7 +80,6 @@
             <th>Primer Vencimiento</th>
             <th>Último Vencimiento</th>
             <th>Status Crédito</th>
-
             <th>Referencia STP</th>
           </tr>
         </thead>
@@ -91,12 +88,10 @@
             <td>{{ datos.idCredito }}</td>
             <td>{{ datos.cuota }}</td>
             <td>${{ "{:,.2f}".format(datos.montoOtorgado) }}</td>
-
             <td>{{ datos.fechaInicio }}</td>
             <td>{{ datos.primerVencimiento }}</td>
             <td>{{ datos.ultimoVencimiento }}</td>
             <td>{{ datos.statusCredito }}</td>
-
             <td>{{ datos.referenciaSTP }}</td>
           </tr>
         </tbody>
@@ -109,86 +104,81 @@
       <thead class="table-dark">
         <tr>
           <th>Nombre</th>
- 	  <th>Nombre</th>
-
         </tr>
       </thead>
       <tbody>
         <tr>
           <td>{{ datos.datosCliente.nombreCliente }}</td>
         </tr>
-
-	<tr>
-    		<th>Dias Mora Maximo</th>
-    		<td>{{ datos.datosSaldos.diasMoraMaximo }}</td>
-  	</tr>
-	<tr>
-    		<th>Cuotas Contratadas</th>
-    		<td>{{ datos.datosSaldos.cuotasContratadas }}</td>
-  	</tr>
-	<tr>
-    		<th>Cuotas Pagadas</th>
-    		<td>{{ datos.datosSaldos.cuotasPagadas }}</td>
-  	</tr>
-	<tr>
-    		<th>Saldo Para LiquidarV2</th>
-    		<td>{{ datos.datosSaldos.saldoParaLiquidarV2 }}</td>
-  	</tr>
+        <tr>
+          <th>Días Mora Máximo</th>
+          <td>{{ datos.datosSaldos.diasMoraMaximo }}</td>
+        </tr>
+        <tr>
+          <th>Cuotas Contratadas</th>
+          <td>{{ datos.datosSaldos.cuotasContratadas }}</td>
+        </tr>
+        <tr>
+          <th>Cuotas Pagadas</th>
+          <td>{{ datos.datosSaldos.cuotasPagadas }}</td>
+        </tr>
+        <tr>
+          <th>Saldo Para LiquidarV2</th>
+          <td>{{ datos.datosSaldos.saldoParaLiquidarV2 }}</td>
+        </tr>
       </tbody>
     </table>
  
-<!-- Mantén todo tu HTML anterior -->
-<!-- Solo reemplaza la sección de "Pagos por Cuota" por esta: -->
-
-<h4>Pagos por Cuota</h4>
-<div class="table-responsive">
-  <table class="table table-bordered table-striped table-hover align-middle text-center">
-    <thead class="table-dark">
-      <tr>
-        <th>Número de Cuota</th>
-        <th>Pagos (ID – Fecha – Monto aplicado)</th>
-	<th>Monto del Pago</th>
-        <th>Total Aplicado</th>
-        <th>Excedente</th>
-        <th>Estatus</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for cuota, pagos in resultado.items() %}
-      <tr>
-        <td><strong>{{ cuota }}</strong></td>
-        <td>
-          <ul class="list-unstyled mb-0">
-            {% for pago in pagos %}
-              <li>
-                <strong>ID:</strong> {{ pago.idPago }} – 
-                <strong>Fecha:</strong> {{ pago.fecha }} – 
-                <strong>Aplicado:</strong> ${{ "{:,.2f}".format(pago.aplicado) }}
-              </li>
-            {% endfor %}
-          </ul>
-        </td>
-
-        <td>
-            <strong>Monto Pago:</strong> ${{ "{:,.2f}".format(pago.monto_pago) }} <!-- 👈 aquí -->
-        </td>
-        <td>
-          ${{ "{:,.2f}".format(pagos | sum(attribute="excedente")) }}
-        </td>
-        <td>
-          {% if (pagos | sum(attribute="aplicado")) >= datos.cuota %}
-            <span class="badge bg-success">Cubierta</span>
-          {% else %}
-            <span class="badge bg-warning text-dark">Pendiente</span>
-          {% endif %}
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-</div>
-
-
+    <!-- Pagos por Cuota -->
+    <h4>Pagos por Cuota</h4>
+    <div class="table-responsive">
+      <table class="table table-bordered table-striped table-hover align-middle text-center">
+        <thead class="table-dark">
+          <tr>
+            <th>Número de Cuota</th>
+            <th>Pagos (ID – Fecha – Monto aplicado)</th>
+            <th>Monto del Pago</th>
+            <th>Total Aplicado</th>
+            <th>Excedente</th>
+            <th>Estatus</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for cuota, pagos in resultado.items() %}
+          <tr>
+            <td><strong>{{ cuota }}</strong></td>
+            <td>
+              <ul class="list-unstyled mb-0">
+                {% for pago in pagos %}
+                  <li>
+                    <strong>ID:</strong> {{ pago.idPago }} – 
+                    <strong>Fecha:</strong> {{ pago.fecha }} – 
+                    <strong>Aplicado:</strong> ${{ "{:,.2f}".format(pago.aplicado) }}
+                  </li>
+                {% endfor %}
+              </ul>
+            </td>
+            <td>
+              ${{ "{:,.2f}".format(pagos | sum(attribute="monto_pago")) }}
+            </td>
+            <td>
+              ${{ "{:,.2f}".format(pagos | sum(attribute="aplicado")) }}
+            </td>
+            <td>
+              ${{ "{:,.2f}".format(pagos | sum(attribute="excedente")) }}
+            </td>
+            <td>
+              {% if (pagos | sum(attribute="aplicado")) >= datos.cuota %}
+                <span class="badge bg-success">Cubierta</span>
+              {% else %}
+                <span class="badge bg-warning text-dark">Pendiente</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
 
     <!-- Notas de cargos -->
     {% if datos.datosNotasCargos %}
@@ -274,8 +264,6 @@
     window.scrollTo({ top: 0, behavior: 'smooth' });
   });
 </script>
-
-
 
 </body>
 </html>
