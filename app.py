@@ -6,14 +6,14 @@ import hashlib
 import os
 
 app = Flask(__name__)
-app.secret_key = 'clave_super_secreta'
+app.secret_key = 'clave_super_secreta'  # cámbiala por seguridad
 
 # ------------------ CONFIGURACIÓN BASE DE DATOS ------------------
 db_config = {
-    'user': os.environ['DB_USER'],
-    'password': os.environ['DB_PASSWORD'],
-    'database': os.environ['DB_NAME'],
-    'unix_socket': f"/cloudsql/{os.environ['DB_CONNECTION_NAME']}"
+    'user': os.environ.get('DB_USER', 'root'),
+    'password': os.environ.get('DB_PASSWORD', ''),
+    'database': os.environ.get('DB_NAME', 'db-mega-reporte'),
+    'unix_socket': f"/cloudsql/{os.environ.get('DB_CONNECTION_NAME','')}"
 }
 
 # ------------------ CONFIGURACIÓN API EXTERNA ------------------
@@ -26,7 +26,6 @@ def login():
     if request.method == 'POST':
         username = request.form['username']
         password = hashlib.sha256(request.form['password'].encode()).hexdigest()
-
         try:
             conn = mysql.connector.connect(**db_config)
             cur = conn.cursor(dictionary=True)
@@ -61,33 +60,33 @@ def index():
         return redirect('/login')
 
     if request.method == 'POST':
-        id_credito = request.form['idCredito']
-        fecha_corte = request.form['fechaCorte'].strip()
+        id_credito = request.form.get('idCredito', '').strip()
+        fecha_corte = request.form.get('fechaCorte', '').strip()
 
         try:
             datetime.strptime(fecha_corte, "%Y-%m-%d")
         except ValueError:
-            error_msg = "Fecha inválida. Usa formato AAAA-MM-DD."
-            return render_template("index.html", error=error_msg, fecha_actual_iso=fecha_corte)
-
-        payload = {"idCredito": int(id_credito), "fechaCorte": fecha_corte}
-        headers = {"Token": TOKEN, "Content-Type": "application/json"}
-        res = requests.post(ENDPOINT, json=payload, headers=headers)
+            return render_template("index.html", error="Fecha inválida. Usa formato AAAA-MM-DD.", fecha_actual_iso=fecha_corte)
 
         try:
+            payload = {"idCredito": int(id_credito), "fechaCorte": fecha_corte}
+            headers = {"Token": TOKEN, "Content-Type": "application/json"}
+            res = requests.post(ENDPOINT, json=payload, headers=headers)
             data = res.json()
-        except Exception:
-            return render_template("resultado.html", error="Respuesta no válida del servidor", http=res.status_code)
+        except Exception as e:
+            return render_template("resultado.html", error=f"Error al conectar con API: {e}", http=500)
 
         if res.status_code == 200 and "estadoCuenta" in data:
             estado_cuenta = data["estadoCuenta"]
 
-            # --------- Estatus de pagos ----------
+            # 👉 Validar y calcular estatusPago
             for pago in estado_cuenta.get("datosPagos", []):
+                fecha_valor_str = pago.get("fechaValor")
+                fecha_registro_str = pago.get("fechaRegistro")
                 try:
-                    fecha_valor = datetime.strptime(pago["fechaValor"], "%Y-%m-%d")
-                    fecha_registro = datetime.strptime(pago["fechaRegistro"], "%Y-%m-%d %H:%M:%S")
-                    dias_atraso = (fecha_registro.date() - fecha_valor.date()).days
+                    fecha_valor = datetime.strptime(fecha_valor_str, "%Y-%m-%d") if fecha_valor_str else None
+                    fecha_registro = datetime.strptime(fecha_registro_str, "%Y-%m-%d %H:%M:%S") if fecha_registro_str else None
+                    dias_atraso = (fecha_registro.date() - fecha_valor.date()).days if fecha_valor and fecha_registro else None
                 except Exception:
                     dias_atraso = None
 
@@ -96,58 +95,32 @@ def index():
                 else:
                     pago["estatusPago"] = "No disponible"
 
-            # --------- Construir resultado con parcialidades encadenadas ----------
-            pagos_ordenados = sorted(estado_cuenta.get("datosPagos", []), key=lambda x: x["numeroCuotaSemanal"])
+            # 👉 Construir pagos agrupados por cuota con cálculo de excedente
             resultado = {}
-            saldo_excedente = 0.0
-            cuota_monto = float(estado_cuenta.get("cuota", 0))
+            for pago in estado_cuenta.get("datosPagos", []):
+                numero_cuota = pago.get("numeroCuotaSemanal") or "0"
+                try:
+                    monto_pago = float(pago.get("montoPago", 0))
+                    cuota = float(estado_cuenta.get("cuota", 0))
+                except Exception:
+                    monto_pago = 0.0
+                    cuota = 0.0
 
-            for pago in pagos_ordenados:
-                cuotas = str(pago["numeroCuotaSemanal"]).split(",")  # puede ser "126,127"
-                monto_total = float(pago.get("montoPago", 0)) + saldo_excedente
-                saldo_excedente = 0.0
+                aplicado = min(monto_pago, cuota)
+                excedente = max(0, monto_pago - cuota)
 
-                for c in cuotas:
-                    aplicado = min(monto_total, cuota_monto)
-                    excedente = max(0, monto_total - cuota_monto)
-                    monto_total = excedente  # para la siguiente cuota si hay más
+                pago_dict = {
+                    "idPago": pago.get("idPago"),
+                    "fecha": pago.get("fechaValor") or "",
+                    "aplicado": aplicado,
+                    "excedente": excedente
+                }
 
-                    if c not in resultado:
-                        resultado[c] = []
+                if numero_cuota not in resultado:
+                    resultado[numero_cuota] = []
+                resultado[numero_cuota].append(pago_dict)
 
-                    resultado[c].append({
-                        "idPago": pago.get("idPago"),
-                        "fecha": pago.get("fechaValor"),
-                        "aplicado": aplicado,
-                        "excedente": excedente
-                    })
-
-                    saldo_excedente += excedente
-
-            # --------- Movimientos (opcional) ----------
-            movimientos = []
-            for c in estado_cuenta.get("datosCargos", []):
-                movimientos.append({
-                    "fecha": c.get("fechaMovimiento") or c.get("fechaVencimiento"),
-                    "concepto": c.get("concepto"),
-                    "cargo": float(c.get("monto", 0)),
-                    "abono": 0.0
-                })
-            for p in estado_cuenta.get("datosPagos", []):
-                movimientos.append({
-                    "fecha": p.get("fechaDeposito") or p.get("fechaValor"),
-                    "concepto": f"Pago cuota(s) {p['numeroCuotaSemanal']}",
-                    "cargo": 0.0,
-                    "abono": float(p.get("montoPago", 0))
-                })
-            movimientos.sort(key=lambda x: x["fecha"])
-
-            saldo = estado_cuenta.get("montoOtorgado", 0)
-            for m in movimientos:
-                saldo += m["cargo"] - m["abono"]
-                m["saldo"] = saldo
-
-            return render_template("resultado.html", datos=estado_cuenta, movimientos=movimientos, resultado=resultado)
+            return render_template("resultado.html", datos=estado_cuenta, resultado=resultado)
 
         else:
             mensaje = data.get("mensaje", ["Error desconocido"])[0]
@@ -156,7 +129,7 @@ def index():
     fecha_actual_iso = datetime.now().strftime("%Y-%m-%d")
     return render_template("index.html", fecha_actual_iso=fecha_actual_iso)
 
-
+# ------------------ APP ------------------
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))
-    app.run(host="0.0.0.0", port=port)
+    app.run(host="0.0.0.0", port=port, debug=True)
