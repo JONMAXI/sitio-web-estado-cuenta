@@ -104,8 +104,7 @@
       <thead class="table-dark">
         <tr>
           <th></th>
-	  <th></th>
-
+          <th></th>
         </tr>
       </thead>
       <tbody>
@@ -130,7 +129,7 @@
         </tr>
       </tbody>
     </table>
- 
+
     <!-- Pagos por Cuota -->
     <h4>Pagos por Cuota</h4>
     <div class="table-responsive">
@@ -160,15 +159,9 @@
                 {% endfor %}
               </ul>
             </td>
-            <td>
-              <td>{{ pago.montoPago_original }}</td>   <!-- 👈 sin procesar -->
-            </td>
-            <td>
-              ${{ "{:,.2f}".format(pagos | sum(attribute="aplicado")) }}
-            </td>
-            <td>
-              ${{ "{:,.2f}".format(pagos | sum(attribute="excedente")) }}
-            </td>
+            <td>{{ pagos[0].montoPago_original }}</td> <!-- Monto puro del JSON -->
+            <td>${{ "{:,.2f}".format(pagos | sum(attribute="aplicado")) }}</td>
+            <td>${{ "{:,.2f}".format(pagos | sum(attribute="excedente")) }}</td>
             <td>
               {% if (pagos | sum(attribute="aplicado")) >= datos.cuota %}
                 <span class="badge bg-success">Cubierta</span>
@@ -239,24 +232,18 @@
   {% endif %}
 
 </div>
+
 <!-- Botón flotante para ir al final -->
 <button id="scrollBottomBtn" class="btn btn-secondary rounded-circle" style="position: fixed; bottom: 30px; right: 30px; width: 50px; height: 50px; z-index: 1000;">
   ⬇️
 </button>
-
-<!-- Script para el botón -->
-<script>
-  document.getElementById("scrollBottomBtn").addEventListener("click", function() {
-    window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
-  });
-</script>
 
 <!-- Botón flotante para ir arriba -->
 <button id="scrollTopBtn" class="btn btn-secondary rounded-circle" style="position: fixed; bottom: 90px; right: 30px; width: 50px; height: 50px; z-index: 1000;">
   ⬆️
 </button>
 
-<!-- Script para los botones de scroll -->
+<!-- Scripts de scroll -->
 <script>
   document.getElementById("scrollBottomBtn").addEventListener("click", function () {
     window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
