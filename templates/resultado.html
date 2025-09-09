@@ -125,45 +125,6 @@
       </tbody>
     </table>
  
-
-
-  <!-- ================= TABLA DE PAGOS ================= -->
-<div class="table-responsive mt-4">
-  <h4>Pagos</h4>
-  <table class="table table-bordered table-striped table-hover">
-    <thead class="table-dark">
-      <tr>
-        <th>ID Pago</th>
-        <th>Fecha Valor</th>
-        <th>Fecha Registro</th>
-        <th>Monto Pago</th>
-        <th>Estatus Pago</th> <!-- NUEVA COLUMNA -->
-      </tr>
-    </thead>
-    <tbody>
-      {% for pago in datos.datosPagos %}
-      <tr>
-        <td>{{ pago.idPago }}</td>
-        <td>{{ pago.fechaValor }}</td>
-        <td>{{ pago.fechaRegistro }}</td>
-        <td>${{ "{:,.2f}".format(pago.montoPago) }}</td>
-        <td>
-          {% if "Atraso" in pago.estatusPago %}
-            <span class="badge bg-danger">{{ pago.estatusPago }}</span>
-          {% elif pago.estatusPago == "Puntual" %}
-            <span class="badge bg-success">{{ pago.estatusPago }}</span>
-          {% else %}
-            <span class="badge bg-secondary">{{ pago.estatusPago }}</span>
-          {% endif %}
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-</div>
-
-
-
 <!-- Mantén todo tu HTML anterior -->
 <!-- Solo reemplaza la sección de "Pagos por Cuota" por esta: -->
 
