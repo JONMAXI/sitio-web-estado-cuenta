@@ -54,6 +54,7 @@ def logout():
     session.pop('usuario', None)
     return redirect('/login')
 
+
 # ------------------ CONSULTA ------------------
 @app.route('/', methods=['GET', 'POST'])
 def index():
@@ -90,17 +91,17 @@ def index():
                 cuotas = str(pago.get("numeroCuotaSemanal", "0")).split(",")
                 monto_pago = float(pago.get("montoPago", 0))
 
-                # calcular días de mora del pago
-                try:
-                    fecha_valor = datetime.strptime(pago["fechaValor"], "%Y-%m-%d")
-                    fecha_registro = datetime.strptime(pago["fechaRegistro"], "%Y-%m-%d %H:%M:%S")
-                    dias_mora_pago = (fecha_registro.date() - fecha_valor.date()).days
-                except Exception:
-                    dias_mora_pago = None
-
                 for i, cuota in enumerate(cuotas):
                     aplicado = min(monto_pago, cuota_base)
                     excedente = max(0, monto_pago - cuota_base) if i == 0 else monto_pago
+
+                    # Calcular Días de Mora solo con el pago principal (aplicado a la cuota)
+                    try:
+                        fecha_valor = datetime.strptime(pago["fechaValor"], "%Y-%m-%d")
+                        fecha_registro = datetime.strptime(pago["fechaRegistro"], "%Y-%m-%d %H:%M:%S")
+                        dias_mora = (fecha_registro.date() - fecha_valor.date()).days
+                    except Exception:
+                        dias_mora = None
 
                     pago_dict = {
                         "idPago": pago.get("idPago"),
@@ -110,7 +111,7 @@ def index():
                         "montoPago_original": pago.get("montoPago"),
                         "aplicado": aplicado,
                         "excedente": excedente,
-                        "dias_mora": dias_mora_pago if i == 0 else None  # solo para la primera cuota del pago
+                        "dias_mora": dias_mora
                     }
 
                     if cuota not in resultado:
