@@ -137,24 +137,24 @@
         <thead class="table-dark">
           <tr>
             <th>Número de Cuota</th>
-	    <th>Fecha Registro</th>
+            <th>Fecha Registro</th>
             <th>Pagos (ID – Fecha Valor – Monto aplicado)</th>
             <th>Monto del Pago</th>
             <th>Total Aplicado</th>
             <th>Excedente</th>
             <th>Estatus</th>
+            <th>Días de Mora</th>
           </tr>
         </thead>
         <tbody>
           {% for cuota, pagos in resultado.items() %}
           <tr>
             <td><strong>{{ cuota }}</strong></td>
+
             <td>
               <ul class="list-unstyled mb-0">
                 {% for pago in pagos %}
-                  <li>
-                    <strong>Fecha:</strong> {{ pago.fechaRegistro }} 
-                  </li>
+                  <li><strong>Fecha:</strong> {{ pago.fechaRegistro }}</li>
                 {% endfor %}
               </ul>
             </td>
@@ -170,7 +170,8 @@
                 {% endfor %}
               </ul>
             </td>
-            <td>{{ pagos[0].montoPago_original }}</td> <!-- Monto puro del JSON -->
+
+            <td>{{ pagos[0].montoPago_original }}</td>
             <td>${{ "{:,.2f}".format(pagos | sum(attribute="aplicado")) }}</td>
             <td>${{ "{:,.2f}".format(pagos | sum(attribute="excedente")) }}</td>
             <td>
@@ -179,6 +180,10 @@
               {% else %}
                 <span class="badge bg-warning text-dark">Pendiente</span>
               {% endif %}
+            </td>
+
+            <td>
+              {{ pagos[0].dias_mora if pagos[0].dias_mora is not none else '-' }}
             </td>
           </tr>
           {% endfor %}
@@ -244,22 +249,18 @@
 
 </div>
 
-<!-- Botón flotante para ir al final -->
+<!-- Botones de scroll -->
 <button id="scrollBottomBtn" class="btn btn-secondary rounded-circle" style="position: fixed; bottom: 30px; right: 30px; width: 50px; height: 50px; z-index: 1000;">
   ⬇️
 </button>
-
-<!-- Botón flotante para ir arriba -->
 <button id="scrollTopBtn" class="btn btn-secondary rounded-circle" style="position: fixed; bottom: 90px; right: 30px; width: 50px; height: 50px; z-index: 1000;">
   ⬆️
 </button>
 
-<!-- Scripts de scroll -->
 <script>
   document.getElementById("scrollBottomBtn").addEventListener("click", function () {
     window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
   });
-
   document.getElementById("scrollTopBtn").addEventListener("click", function () {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   });
