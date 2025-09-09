@@ -161,7 +161,7 @@
               </ul>
             </td>
             <td>
-              ${{ "{:,.2f}".format(pagos | sum(attribute="monto_pago")) }}
+              <td>{{ pago.montoPago_original }}</td>   <!-- 👈 sin procesar -->
             </td>
             <td>
               ${{ "{:,.2f}".format(pagos | sum(attribute="aplicado")) }}
