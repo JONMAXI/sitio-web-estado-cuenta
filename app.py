@@ -111,6 +111,7 @@ def index():
                     pago_dict = {
                         "idPago": pago.get("idPago"),
                         "fecha": pago.get("fechaValor") or "",
+ 			"monto_pago": float(pago.get("montoPago", 0)),   # 👈 aquí lo agregas
                         "aplicado": aplicado,
                         "excedente": excedente
                     }

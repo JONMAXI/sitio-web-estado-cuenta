@@ -119,7 +119,19 @@
         </tr>
 
 	<tr>
-    		<th>Saldo para Liquidar</th>
+    		<th>Dias Mora Maximo</th>
+    		<td>{{ datos.datosSaldos.diasMoraMaximo }}</td>
+  	</tr>
+	<tr>
+    		<th>Cuotas Contratadas</th>
+    		<td>{{ datos.datosSaldos.cuotasContratadas }}</td>
+  	</tr>
+	<tr>
+    		<th>Cuotas Pagadas</th>
+    		<td>{{ datos.datosSaldos.cuotasPagadas }}</td>
+  	</tr>
+	<tr>
+    		<th>Saldo Para LiquidarV2</th>
     		<td>{{ datos.datosSaldos.saldoParaLiquidarV2 }}</td>
   	</tr>
       </tbody>
@@ -135,6 +147,7 @@
       <tr>
         <th>Número de Cuota</th>
         <th>Pagos (ID – Fecha – Monto aplicado)</th>
+	<th>Monto del Pago</th>
         <th>Total Aplicado</th>
         <th>Excedente</th>
         <th>Estatus</th>
@@ -155,8 +168,9 @@
             {% endfor %}
           </ul>
         </td>
+
         <td>
-          ${{ "{:,.2f}".format(pagos | sum(attribute="aplicado")) }}
+            <strong>Monto Pago:</strong> ${{ "{:,.2f}".format(pago.monto_pago) }} <!-- 👈 aquí -->
         </td>
         <td>
           ${{ "{:,.2f}".format(pagos | sum(attribute="excedente")) }}
