@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, session, url_for
+from flask import Flask, render_template, request, redirect, session
 import mysql.connector
 import requests
 from datetime import datetime
@@ -6,10 +6,9 @@ import hashlib
 import os
 
 app = Flask(__name__)
-app.secret_key = 'clave_super_secreta'  # cámbiala por seguridad
+app.secret_key = 'clave_super_secreta'
 
 # ------------------ CONFIGURACIÓN BASE DE DATOS ------------------
-
 db_config = {
     'user': os.environ['DB_USER'],
     'password': os.environ['DB_PASSWORD'],
@@ -18,12 +17,10 @@ db_config = {
 }
 
 # ------------------ CONFIGURACIÓN API EXTERNA ------------------
-
 TOKEN = "3oJVoAHtwWn7oBT4o340gFkvq9uWRRmpFo7p"
 ENDPOINT = "https://servicios.s2movil.net/s2maxikash/estadocuenta"
 
 # ------------------ LOGIN ------------------
-
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -58,7 +55,6 @@ def logout():
     return redirect('/login')
 
 # ------------------ CONSULTA ------------------
-
 @app.route('/', methods=['GET', 'POST'])
 def index():
     if 'usuario' not in session:
@@ -74,16 +70,8 @@ def index():
             error_msg = "Fecha inválida. Usa formato AAAA-MM-DD."
             return render_template("index.html", error=error_msg, fecha_actual_iso=fecha_corte)
 
-        payload = {
-            "idCredito": int(id_credito),
-            "fechaCorte": fecha_corte
-        }
-
-        headers = {
-            "Token": TOKEN,
-            "Content-Type": "application/json"
-        }
-
+        payload = {"idCredito": int(id_credito), "fechaCorte": fecha_corte}
+        headers = {"Token": TOKEN, "Content-Type": "application/json"}
         res = requests.post(ENDPOINT, json=payload, headers=headers)
 
         try:
@@ -94,7 +82,7 @@ def index():
         if res.status_code == 200 and "estadoCuenta" in data:
             estado_cuenta = data["estadoCuenta"]
 
-            # 👉 Lógica de estatusPago
+            # --------- Estatus de pagos ----------
             for pago in estado_cuenta.get("datosPagos", []):
                 try:
                     fecha_valor = datetime.strptime(pago["fechaValor"], "%Y-%m-%d")
@@ -104,16 +92,40 @@ def index():
                     dias_atraso = None
 
                 if dias_atraso is not None:
-                    if dias_atraso <= 0:
-                        pago["estatusPago"] = "Puntual"
-                    else:
-                        pago["estatusPago"] = f"Atraso de {dias_atraso} días"
+                    pago["estatusPago"] = "Puntual" if dias_atraso <= 0 else f"Atraso de {dias_atraso} días"
                 else:
                     pago["estatusPago"] = "No disponible"
 
-            # 👉 Construir movimientos (cargos + abonos)
+            # --------- Construir resultado con parcialidades encadenadas ----------
+            pagos_ordenados = sorted(estado_cuenta.get("datosPagos", []), key=lambda x: x["numeroCuotaSemanal"])
+            resultado = {}
+            saldo_excedente = 0.0
+            cuota_monto = float(estado_cuenta.get("cuota", 0))
+
+            for pago in pagos_ordenados:
+                cuotas = str(pago["numeroCuotaSemanal"]).split(",")  # puede ser "126,127"
+                monto_total = float(pago.get("montoPago", 0)) + saldo_excedente
+                saldo_excedente = 0.0
+
+                for c in cuotas:
+                    aplicado = min(monto_total, cuota_monto)
+                    excedente = max(0, monto_total - cuota_monto)
+                    monto_total = excedente  # para la siguiente cuota si hay más
+
+                    if c not in resultado:
+                        resultado[c] = []
+
+                    resultado[c].append({
+                        "idPago": pago.get("idPago"),
+                        "fecha": pago.get("fechaValor"),
+                        "aplicado": aplicado,
+                        "excedente": excedente
+                    })
+
+                    saldo_excedente += excedente
+
+            # --------- Movimientos (opcional) ----------
             movimientos = []
-            # Cargos = cuotas semanales
             for c in estado_cuenta.get("datosCargos", []):
                 movimientos.append({
                     "fecha": c.get("fechaMovimiento") or c.get("fechaVencimiento"),
@@ -121,7 +133,6 @@ def index():
                     "cargo": float(c.get("monto", 0)),
                     "abono": 0.0
                 })
-            # Pagos
             for p in estado_cuenta.get("datosPagos", []):
                 movimientos.append({
                     "fecha": p.get("fechaDeposito") or p.get("fechaValor"),
@@ -129,17 +140,14 @@ def index():
                     "cargo": 0.0,
                     "abono": float(p.get("montoPago", 0))
                 })
-
-            # Ordenar por fecha
             movimientos.sort(key=lambda x: x["fecha"])
 
-            # Calcular saldo acumulado partiendo del monto otorgado
             saldo = estado_cuenta.get("montoOtorgado", 0)
             for m in movimientos:
                 saldo += m["cargo"] - m["abono"]
                 m["saldo"] = saldo
 
-            return render_template("resultado.html", datos=estado_cuenta, movimientos=movimientos)
+            return render_template("resultado.html", datos=estado_cuenta, movimientos=movimientos, resultado=resultado)
 
         else:
             mensaje = data.get("mensaje", ["Error desconocido"])[0]
@@ -148,7 +156,6 @@ def index():
     fecha_actual_iso = datetime.now().strftime("%Y-%m-%d")
     return render_template("index.html", fecha_actual_iso=fecha_actual_iso)
 
-# ------------------ APP ------------------
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))

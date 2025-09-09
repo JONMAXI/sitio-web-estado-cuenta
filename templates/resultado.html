@@ -3,39 +3,15 @@
 <head>
   <meta charset="UTF-8" />
   <title>Resultado Estado de Cuenta</title>
-
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
   <style>
-    body {
-      background-color: #f8f9fa;
-    }
-    .logo {
-      max-height: 60px;
-    }
-    .header-bar {
-      background-color: white;
-      padding: 1rem 2rem;
-      box-shadow: 0 0 10px rgba(0,0,0,0.05);
-    }
-    .table-container {
-      background: white;
-      border-radius: 8px;
-      padding: 2rem;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-      margin-top: 2rem;
-    }
-    .btn-custom {
-      background-color: #0d6efd;
-      color: white;
-      font-weight: 500;
-    }
-    .btn-custom:hover {
-      background-color: #084298;
-    }
-    h5.section-title {
-      margin-top: 2rem;
-      color: #495057;
-    }
+    body { background-color: #f8f9fa; }
+    .logo { max-height: 60px; }
+    .header-bar { background-color: white; padding: 1rem 2rem; box-shadow: 0 0 10px rgba(0,0,0,0.05); }
+    .table-container { background: white; border-radius: 8px; padding: 2rem; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-top: 2rem; }
+    .btn-custom { background-color: #0d6efd; color: white; font-weight: 500; }
+    .btn-custom:hover { background-color: #084298; }
+    h5.section-title { margin-top: 2rem; color: #495057; }
   </style>
 </head>
 <body>
@@ -45,18 +21,16 @@
     <img src="https://maxikash.mx/cdn/shop/files/Logotipo-Maxikash-Outline.png?v=1749328460" alt="Logo" class="logo me-3">
     <h5 class="mb-0 text-secondary">Resultado de Estado de Cuenta</h5>
   </div>
-  {% if session.get('user') %}
+  {% if session.get('usuario') %}
   <div class="text-end">
     <small class="text-secondary">
-      Bienvenido, <strong>{{ session['user']['nombre'] }}</strong> – {{ session['user']['puesto'] }} ({{ session['user']['grupo'] }})
+      Bienvenido, <strong>{{ session['usuario']['nombre_completo'] }}</strong> – {{ session['usuario']['puesto'] }} ({{ session['usuario']['grupo'] }})
     </small>
   </div>
-{% endif %}
-
+  {% endif %}
 </div>
 
 <div class="container table-container">
-
   {% if error %}
     <div class="alert alert-danger">
       <strong>Error:</strong> {{ error }} <br/>
@@ -64,293 +38,58 @@
     </div>
     <a href="/" class="btn btn-secondary mt-3">Volver</a>
   {% else %}
-<div class="d-flex justify-content-end mt-4">
-      <a href="/" class="btn btn-custom">Nueva Consulta</a>
-    </div>
-
-
-    <!-- Datos generales -->
-    <h5 class="section-title">Datos Generales</h5>
-    <div class="table-responsive">
-      <table class="table table-bordered table-striped text-center align-middle">
-        <thead class="table-dark">
-          <tr>
-            <th>ID Crédito</th>
-            <th>Cuota</th>
-            <th>Monto Otorgado</th>
-            <th>Fecha Inicio</th>
-            <th>Primer Vencimiento</th>
-            <th>Último Vencimiento</th>
-            <th>Status Crédito</th>
-
-            <th>Referencia STP</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>{{ datos.idCredito }}</td>
-            <td>{{ datos.cuota }}</td>
-            <td>${{ "{:,.2f}".format(datos.montoOtorgado) }}</td>
-
-            <td>{{ datos.fechaInicio }}</td>
-            <td>{{ datos.primerVencimiento }}</td>
-            <td>{{ datos.ultimoVencimiento }}</td>
-            <td>{{ datos.statusCredito }}</td>
-
-            <td>{{ datos.referenciaSTP }}</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-
-    <!-- Datos del cliente -->
-    <h5 class="section-title">Datos del Cliente</h5>
-    <table class="table table-bordered table-striped text-center align-middle">
-      <thead class="table-dark">
-        <tr>
-          <th>Nombre</th>
- 	  <th></th>
-
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>{{ datos.datosCliente.nombreCliente }}</td>
-        </tr>
-
-	<tr>
-    		<th>Saldo para Liquidar</th>
-    		<td>{{ datos.datosSaldos.saldoParaLiquidarV2 }}</td>
-  	</tr>
-      </tbody>
-    </table>
- 
-<!-- ================= TABLA DE PAGOS AGRUPADOS ================= -->
-<h4>Pagos por Cuota</h4>
-<div class="table-responsive">
-  <table class="table table-bordered table-striped table-hover align-middle text-center">
-    <thead class="table-dark">
-      <tr>
-        <th>Número de Cuota</th>
-        <th>Pagos (ID – Fecha – Monto – Estatus)</th>
-        <th>Total Pagado</th>
-      </tr>
-    </thead>
-    <tbody>
-      {# Creamos un diccionario para agrupar pagos por cuota #}
-      {% set pagos_por_cuota = {} %}
-      {% for pago in datos.datosPagos %}
-        {% if pago.numeroCuotaSemanal not in pagos_por_cuota %}
-          {% set _ = pagos_por_cuota.update({pago.numeroCuotaSemanal: []}) %}
-        {% endif %}
-        {% set _ = pagos_por_cuota[pago.numeroCuotaSemanal].append(pago) %}
-      {% endfor %}
-
-      {# Recorremos cada cuota y mostramos los pagos agrupados #}
-      {% for cuota, pagos in pagos_por_cuota.items() %}
-      <tr>
-        <td><strong>{{ cuota }}</strong></td>
-        <td>
-          <ul class="list-unstyled mb-0">
-            {% for pago in pagos %}
-              <li>
-                <strong>ID:</strong> {{ pago.idPago }} – 
-                <strong>Fecha:</strong> {{ pago.fechaValor }} – 
-                <strong>Monto:</strong> ${{ "{:,.2f}".format(pago.montoPago) }} – 
-                <strong>Estatus:</strong>
-                {% if "Atraso" in pago.estatusPago %}
-                  <span class="badge bg-danger">{{ pago.estatusPago }}</span>
-                {% elif pago.estatusPago == "Puntual" %}
-                  <span class="badge bg-success">{{ pago.estatusPago }}</span>
-                {% else %}
-                  <span class="badge bg-secondary">{{ pago.estatusPago }}</span>
-                {% endif %}
-              </li>
-            {% endfor %}
-          </ul>
-        </td>
-        <td>
-          ${{ "{:,.2f}".format(pagos | sum(attribute="montoPago")) }}
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-</div>
-
-<h4>Pagos por Cuota</h4>
-<div class="table-responsive">
-  <table class="table table-bordered table-striped table-hover align-middle text-center">
-    <thead class="table-dark">
-      <tr>
-        <th>Número de Cuota</th>
-        <th>Pagos (ID – Fecha – Monto aplicado)</th>
-        <th>Total Aplicado</th>
-        <th>Excedente</th>
-        <th>Estatus</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for cuota, pagos in resultado.items() %}
-      <tr>
-        <td><strong>{{ cuota }}</strong></td>
-        <td>
-          <ul class="list-unstyled mb-0">
-            {% for pago in pagos %}
-              <li>
-                <strong>ID:</strong> {{ pago.idPago }} – 
-                <strong>Fecha:</strong> {{ pago.fecha }} – 
-                <strong>Aplicado:</strong> ${{ "{:,.2f}".format(pago.aplicado) }}
-              </li>
-            {% endfor %}
-          </ul>
-        </td>
-        <td>
-          ${{ "{:,.2f}".format(pagos | sum(attribute="aplicado")) }}
-        </td>
-        <td>
-          ${{ "{:,.2f}".format(pagos | sum(attribute="excedente")) }}
-        </td>
-        <td>
-          {% if (pagos | sum(attribute="aplicado")) >= datos.cuota %}
-            <span class="badge bg-success">Cubierta</span>
-          {% else %}
-            <span class="badge bg-warning text-dark">Pendiente</span>
-          {% endif %}
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-</div>
-
-
-
-
-
-
-  <!-- ================= TABLA DE PAGOS ================= -->
-<div class="table-responsive mt-4">
-  <h4>Pagos</h4>
-  <table class="table table-bordered table-striped table-hover">
-    <thead class="table-dark">
-      <tr>
-        <th>ID Pago</th>
-        <th>Fecha Valor</th>
-        <th>Fecha Registro</th>
-        <th>Monto Pago</th>
-        <th>Estatus Pago</th> <!-- NUEVA COLUMNA -->
-      </tr>
-    </thead>
-    <tbody>
-      {% for pago in datos.datosPagos %}
-      <tr>
-        <td>{{ pago.idPago }}</td>
-        <td>{{ pago.fechaValor }}</td>
-        <td>{{ pago.fechaRegistro }}</td>
-        <td>${{ "{:,.2f}".format(pago.montoPago) }}</td>
-        <td>
-          {% if "Atraso" in pago.estatusPago %}
-            <span class="badge bg-danger">{{ pago.estatusPago }}</span>
-          {% elif pago.estatusPago == "Puntual" %}
-            <span class="badge bg-success">{{ pago.estatusPago }}</span>
-          {% else %}
-            <span class="badge bg-secondary">{{ pago.estatusPago }}</span>
-          {% endif %}
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-</div>
-
-
-    <!-- Notas de cargos -->
-    {% if datos.datosNotasCargos %}
-    <h5 class="section-title">Notas de Cargos</h5>
-    <div class="table-responsive">
-      <table class="table table-bordered table-striped text-center align-middle">
-        <thead class="table-dark">
-          <tr>
-            {% for key in datos.datosNotasCargos[0].keys() %}
-              <th>{{ key }}</th>
-            {% endfor %}
-          </tr>
-        </thead>
-        <tbody>
-          {% for nota in datos.datosNotasCargos %}
-          <tr>
-            {% for value in nota.values() %}
-              <td>{{ value }}</td>
-            {% endfor %}
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-    {% endif %}
-
-    <!-- Notas de crédito -->
-    {% if datos.datosNotasCreditos %}
-    <h5 class="section-title">Notas de Créditos</h5>
-    <div class="table-responsive">
-      <table class="table table-bordered table-striped text-center align-middle">
-        <thead class="table-dark">
-          <tr>
-            {% for key in datos.datosNotasCreditos[0].keys() %}
-              <th>{{ key }}</th>
-            {% endfor %}
-          </tr>
-        </thead>
-        <tbody>
-          {% for nota in datos.datosNotasCreditos %}
-          <tr>
-            {% for value in nota.values() %}
-              <td>{{ value }}</td>
-            {% endfor %}
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-    {% endif %}
-
     <div class="d-flex justify-content-end mt-4">
       <a href="/" class="btn btn-custom">Nueva Consulta</a>
     </div>
 
+    <!-- ================= TABLA DE PAGOS POR CUOTA ================= -->
+    <h4>Pagos por Cuota</h4>
+    <div class="table-responsive">
+      <table class="table table-bordered table-striped table-hover align-middle text-center">
+        <thead class="table-dark">
+          <tr>
+            <th>Número de Cuota</th>
+            <th>Pagos (ID – Fecha – Monto aplicado)</th>
+            <th>Total Aplicado</th>
+            <th>Excedente</th>
+            <th>Estatus</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for cuota, pagos in resultado.items() %}
+          <tr>
+            <td><strong>{{ cuota }}</strong></td>
+            <td>
+              <ul class="list-unstyled mb-0">
+                {% for pago in pagos %}
+                <li>
+                  <strong>ID:</strong> {{ pago.idPago }} –
+                  <strong>Fecha:</strong> {{ pago.fecha }} –
+                  <strong>Aplicado:</strong> ${{ "{:,.2f}".format(pago.aplicado) }}
+                </li>
+                {% endfor %}
+              </ul>
+            </td>
+            <td>${{ "{:,.2f}".format(pagos | sum(attribute="aplicado")) }}</td>
+            <td>${{ "{:,.2f}".format(pagos | sum(attribute="excedente")) }}</td>
+            <td>
+              {% if (pagos | sum(attribute="aplicado")) >= datos.cuota %}
+                <span class="badge bg-success">Cubierta</span>
+              {% else %}
+                <span class="badge bg-warning text-dark">Pendiente</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="d-flex justify-content-end mt-4">
+      <a href="/" class="btn btn-custom">Nueva Consulta</a>
+    </div>
   {% endif %}
-
 </div>
-<!-- Botón flotante para ir al final -->
-<button id="scrollBottomBtn" class="btn btn-secondary rounded-circle" style="position: fixed; bottom: 30px; right: 30px; width: 50px; height: 50px; z-index: 1000;">
-  ⬇️
-</button>
-
-<!-- Script para el botón -->
-<script>
-  document.getElementById("scrollBottomBtn").addEventListener("click", function() {
-    window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
-  });
-</script>
-
-<!-- Botón flotante para ir arriba -->
-<button id="scrollTopBtn" class="btn btn-secondary rounded-circle" style="position: fixed; bottom: 90px; right: 30px; width: 50px; height: 50px; z-index: 1000;">
-  ⬆️
-</button>
-
-<!-- Script para los botones de scroll -->
-<script>
-  document.getElementById("scrollBottomBtn").addEventListener("click", function () {
-    window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
-  });
-
-  document.getElementById("scrollTopBtn").addEventListener("click", function () {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  });
-</script>
-
-
 
 </body>
 </html>
