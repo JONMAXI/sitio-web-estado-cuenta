@@ -136,7 +136,6 @@ def documentos():
 
     if request.method == 'POST':
         id_credito = request.form['idCredito']
-        # Simulación de documentos (puedes reemplazar por tu API o BD)
         documentos_data = [
             {"tipo": "Comprobante de Pago", "fecha": "2023-06-22", "archivo": "comprobante_10584.pdf"},
             {"tipo": "Estado de Cuenta", "fecha": "2023-06-20", "archivo": "estado_10584.pdf"}

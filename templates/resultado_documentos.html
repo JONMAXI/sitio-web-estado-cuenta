@@ -23,9 +23,7 @@
                 <td>{{ doc.tipo }}</td>
                 <td>{{ doc.fecha }}</td>
                 <td>
-                    <a href="{{ url_for('descargar', id_credito=id_credito) }}" target="_blank">
-                        Ver / Descargar
-                    </a>
+                    <a href="/descargar/{{ id_credito }}" target="_blank">{{ doc.archivo }}</a>
                 </td>
             </tr>
             {% endfor %}
