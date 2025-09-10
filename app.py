@@ -162,7 +162,7 @@ def descargar(id_credito):
         return Response(
             r.content,
             mimetype="application/pdf",
-            headers={"Content-Disposition": f"attachment; filename={id_credito}_factura.pdf"}
+            headers={"Content-Disposition": f"inline; filename={id_credito}_factura.pdf"}
         )
     else:
         return f"Error al obtener factura de {id_credito}", r.status_code
