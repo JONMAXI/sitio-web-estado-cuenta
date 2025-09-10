@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>Consulta de Documentos</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
         body {
             background-color: #f8fafc;
@@ -12,47 +13,70 @@
             border-radius: 16px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.08);
         }
-        .header-logo {
-            height: 70px;
-        }
-        .logout-btn {
-            border-radius: 20px;
-            font-weight: 500;
-        }
-        .form-control {
-            border-radius: 10px;
+        .pdf-viewer {
+            height: 600px;
+            border: none;
+            width: 100%;
         }
     </style>
 </head>
 <body>
-    <div class="container py-4">
-        <!-- Header -->
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <div class="d-flex align-items-center gap-3">
-                <img src="https://maxikash.mx/cdn/shop/files/Logotipo-Maxikash-Outline.png?v=1749328460" alt="Logo" class="header-logo">
-                {% if session.get('usuario') %}
-                    <h4 class="mb-0 fw-semibold text-secondary">Bienvenido, {{ session['usuario']['nombre_completo'] }}</h4>
-                {% endif %}
+    <div class="container py-5">
+        <h2 class="text-center mb-4">Consulta de Documentos</h2>
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <form id="formConsulta">
+                    <div class="mb-3">
+                        <label for="idDocumento" class="form-label">ID Documento</label>
+                        <input type="text" class="form-control" id="idDocumento" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Buscar Documento</button>
+                </form>
             </div>
-            <a href="/" class="btn btn-outline-primary logout-btn">Estado de Cuenta</a>
-            <a href="/logout" class="btn btn-outline-danger logout-btn">Cerrar sesión</a>
         </div>
 
-        <!-- Formulario -->
-        <div class="row justify-content-center">
-            <div class="col-md-8">
-                <div class="card p-4">
-                    <h3 class="text-center mb-4">Consulta de Documentos</h3>
-                    <form method="post">
-                        <div class="mb-3">
-                            <label for="idCredito" class="form-label">ID Crédito</label>
-                            <input type="number" class="form-control" id="idCredito" name="idCredito" required>
-                        </div>
-                        <button type="submit" class="btn btn-primary w-100">Consultar</button>
-                    </form>
-                </div>
+        <div class="row mt-5" id="visorContainer" style="display: none;">
+            <div class="col-12">
+                <h5>Visualizador de Documento:</h5>
+                <iframe id="visorPDF" class="pdf-viewer"></iframe>
             </div>
         </div>
     </div>
+
+    <script>
+        document.getElementById('formConsulta').addEventListener('submit', async function (e) {
+            e.preventDefault();
+
+            const id = document.getElementById('idDocumento').value.trim();
+            if (!id) return;
+
+            const url = `http://54.167.121.148:8081/s3/downloadS3File?fileName=FACTURA/${id}_factura.pdf`;
+
+            try {
+                const response = await fetch(url, { method: 'HEAD' });
+
+                if (response.ok) {
+                    // Mostrar el visor PDF
+                    document.getElementById('visorPDF').src = url;
+                    document.getElementById('visorContainer').style.display = 'block';
+                } else {
+                    // PDF no encontrado
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Archivo no encontrado',
+                        text: 'No se encontró el archivo con el ID proporcionado.'
+                    });
+                    document.getElementById('visorContainer').style.display = 'none';
+                }
+            } catch (error) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error de conexión',
+                    text: 'No se pudo conectar al servidor para buscar el documento.'
+                });
+                document.getElementById('visorContainer').style.display = 'none';
+            }
+        });
+    </script>
 </body>
 </html>
