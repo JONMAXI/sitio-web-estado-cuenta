@@ -22,7 +22,11 @@
             <tr>
                 <td>{{ doc.tipo }}</td>
                 <td>{{ doc.fecha }}</td>
-                <td><a href="/ruta_archivos/{{ doc.archivo }}" target="_blank">{{ doc.archivo }}</a></td>
+                <td>
+                    <a href="{{ url_for('descargar', id_credito=id_credito) }}" target="_blank">
+                        Ver / Descargar
+                    </a>
+                </td>
             </tr>
             {% endfor %}
         </tbody>

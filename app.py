@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, session
+from flask import Flask, render_template, request, redirect, session, Response, url_for
 import mysql.connector
 import requests
 from datetime import datetime
@@ -54,7 +54,7 @@ def logout():
     session.pop('usuario', None)
     return redirect('/login')
 
-# ------------------ CONSULTA ------------------
+# ------------------ CONSULTA ESTADO DE CUENTA ------------------
 @app.route('/', methods=['GET', 'POST'])
 def index():
     if 'usuario' not in session:
@@ -110,7 +110,7 @@ def index():
                         "montoPago_original": pago.get("montoPago"),
                         "aplicado": aplicado,
                         "excedente": excedente,
-                        "dias_mora": dias_mora_pago if i == 0 else None  # solo para la primera cuota del pago
+                        "dias_mora": dias_mora_pago if i == 0 else None
                     }
 
                     if cuota not in resultado:
@@ -130,6 +130,7 @@ def index():
     fecha_actual_iso = datetime.now().strftime("%Y-%m-%d")
     return render_template("index.html", fecha_actual_iso=fecha_actual_iso)
 
+# ------------------ CONSULTA DOCUMENTOS ------------------
 @app.route('/documentos', methods=['GET', 'POST'])
 def documentos():
     if 'usuario' not in session:
@@ -137,19 +138,34 @@ def documentos():
 
     if request.method == 'POST':
         id_credito = request.form['idCredito']
-        # Aquí podrías agregar lógica para consultar documentos desde la API o BD
-        # Por ejemplo, payload = {"idCredito": int(id_credito)}
-        # res = requests.post(DOCUMENTS_ENDPOINT, json=payload, headers=headers)
 
-        # Por ahora, vamos a simular respuesta
+        # Simulación: lista de documentos asociados
         documentos_data = [
-            {"tipo": "Comprobante de Pago", "fecha": "2023-06-22", "archivo": "comprobante_10584.pdf"},
-            {"tipo": "Estado de Cuenta", "fecha": "2023-06-20", "archivo": "estado_10584.pdf"}
+            {"tipo": "Factura", "fecha": "2023-06-22"}
         ]
 
         return render_template("resultado_documentos.html", id_credito=id_credito, documentos=documentos_data)
 
     return render_template("consulta_documentos.html")
+
+# ------------------ DESCARGA DE DOCUMENTOS (PROXY) ------------------
+@app.route('/descargar/<int:id_credito>')
+def descargar(id_credito):
+    url = f"http://54.167.121.148:8081/s3/downloadS3File?fileName=FACTURA/{id_credito}_factura.pdf"
+
+    try:
+        r = requests.get(url, stream=True, timeout=20)
+    except Exception as e:
+        return f"Error al conectar al servidor de documentos: {str(e)}", 500
+
+    if r.status_code == 200:
+        return Response(
+            r.content,
+            mimetype="application/pdf",
+            headers={"Content-Disposition": f"attachment; filename={id_credito}_factura.pdf"}
+        )
+    else:
+        return f"Error al obtener factura de {id_credito}", r.status_code
 
 
 if __name__ == "__main__":

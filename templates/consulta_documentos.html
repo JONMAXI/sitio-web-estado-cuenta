@@ -27,7 +27,7 @@
             <div class="col-md-6">
                 <form id="formConsulta">
                     <div class="mb-3">
-                        <label for="idDocumento" class="form-label">ID Documento</label>
+                        <label for="idDocumento" class="form-label">ID Crédito</label>
                         <input type="text" class="form-control" id="idDocumento" required>
                     </div>
                     <button type="submit" class="btn btn-primary w-100">Buscar Documento</button>
@@ -50,17 +50,16 @@
             const id = document.getElementById('idDocumento').value.trim();
             if (!id) return;
 
-            const url = `http://54.167.121.148:8081/s3/downloadS3File?fileName=FACTURA/${id}_factura.pdf`;
+            // Usamos tu proxy Flask
+            const url = `/descargar/${id}`;
 
             try {
                 const response = await fetch(url, { method: 'HEAD' });
 
                 if (response.ok) {
-                    // Mostrar el visor PDF
                     document.getElementById('visorPDF').src = url;
                     document.getElementById('visorContainer').style.display = 'block';
                 } else {
-                    // PDF no encontrado
                     Swal.fire({
                         icon: 'error',
                         title: 'Archivo no encontrado',
