@@ -11,8 +11,9 @@
     <style>
         body { background-color: #f8fafc; }
         #pdfContainer { border:1px solid #ccc; padding:10px; text-align:center; background:#fff; }
-        canvas { margin: 10px 0; border:1px solid #ddd; }
+        canvas { margin: 10px 0; border:1px solid #ddd; display:block; margin-left:auto; margin-right:auto; }
         .controls { margin-bottom:10px; }
+        img.documento-imagen { max-width: 100%; margin-top:10px; border:1px solid #ddd; }
     </style>
 </head>
 <body>
@@ -23,8 +24,16 @@
         <div class="col-md-6">
             <form id="formConsulta">
                 <div class="mb-3">
-                    <label for="idDocumento" class="form-label">ID Crédito</label>
+                    <label for="idDocumento" class="form-label">ID Crédito / Persona</label>
                     <input type="text" class="form-control" id="idDocumento" required>
+                </div>
+                <div class="mb-3">
+                    <label for="tipoDocumento" class="form-label">Tipo de Documento</label>
+                    <select id="tipoDocumento" class="form-select" required>
+                        <option value="INE">INE (Frente + Reverso)</option>
+                        <option value="Otro 1">Otro 1</option>
+                        <option value="Contrato">Contrato</option>
+                    </select>
                 </div>
                 <button type="submit" class="btn btn-primary w-100">Buscar Documento</button>
             </form>
@@ -33,7 +42,7 @@
 
     <div class="row mt-4" id="visorContainer" style="display:none;">
         <div class="col-12">
-            <div class="controls mb-2">
+            <div class="controls mb-2" id="pdfControls" style="display:none;">
                 <button class="btn btn-sm btn-secondary" id="prevPage">Anterior</button>
                 <button class="btn btn-sm btn-secondary" id="nextPage">Siguiente</button>
                 <span>Página: <span id="pageNum">1</span> / <span id="pageCount">1</span></span>
@@ -49,21 +58,30 @@
 const pdfjsLib = window['pdfjs-dist/build/pdf'];
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
 
-let pdfDoc = null, pageNum = 1, scale = 1.5;
+let pdfDoc = null, pageNum = 1, scale = 2.0;
 
 const container = document.getElementById('pdfContainer');
 const pageNumSpan = document.getElementById('pageNum');
 const pageCountSpan = document.getElementById('pageCount');
+const pdfControls = document.getElementById('pdfControls');
 
 async function renderPage(num) {
     const page = await pdfDoc.getPage(num);
     const viewport = page.getViewport({ scale: scale });
-    container.innerHTML = ''; // limpiar canvas anterior
+    const ratio = window.devicePixelRatio || 1;
+
+    container.innerHTML = '';
     const canvas = document.createElement('canvas');
     container.appendChild(canvas);
+
+    canvas.width = viewport.width * ratio;
+    canvas.height = viewport.height * ratio;
+    canvas.style.width = viewport.width + 'px';
+    canvas.style.height = viewport.height + 'px';
+
     const ctx = canvas.getContext('2d');
-    canvas.height = viewport.height;
-    canvas.width = viewport.width;
+    ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+
     await page.render({ canvasContext: ctx, viewport: viewport }).promise;
     pageNumSpan.textContent = pageNum;
 }
@@ -71,46 +89,41 @@ async function renderPage(num) {
 document.getElementById('formConsulta').addEventListener('submit', async function(e){
     e.preventDefault();
     const id = document.getElementById('idDocumento').value.trim();
+    const tipo = document.getElementById('tipoDocumento').value;
     if (!id) return;
 
-    const url = `/descargar/${id}`;
+    const url = `/descargar/${id}?tipo=${tipo}`;
 
     try {
-        const headResp = await fetch(url, { method:'HEAD' });
-        if (!headResp.ok) throw new Error('Archivo no encontrado');
+        const res = await fetch(url);
+        if (!res.ok) throw new Error("Documento no encontrado");
+        const blob = await res.blob();
 
-        pdfDoc = await pdfjsLib.getDocument(url).promise;
-        pageNum = 1;
-        pageCountSpan.textContent = pdfDoc.numPages;
-        renderPage(pageNum);
+        container.innerHTML = '';
         document.getElementById('visorContainer').style.display = 'block';
-    } catch(err) {
+
+        if (tipo === 'INE' || tipo === 'Contrato') {
+            pdfDoc = await pdfjsLib.getDocument({ data: await blob.arrayBuffer() }).promise;
+            pageNum = 1;
+            scale = 2.0;
+            pdfControls.style.display = 'block';
+            await renderPage(pageNum);
+
+            document.getElementById('prevPage').onclick = () => { if(pageNum>1){pageNum--; renderPage(pageNum);} };
+            document.getElementById('nextPage').onclick = () => { if(pageNum<pdfDoc.numPages){pageNum++; renderPage(pageNum);} };
+            document.getElementById('zoomIn').onclick = () => { scale += 0.2; renderPage(pageNum); };
+            document.getElementById('zoomOut').onclick = () => { scale = Math.max(0.5, scale-0.2); renderPage(pageNum); };
+        } else {
+            pdfControls.style.display = 'none';
+            const img = document.createElement('img');
+            img.src = URL.createObjectURL(blob);
+            img.className = 'documento-imagen';
+            container.appendChild(img);
+        }
+    } catch (err) {
         Swal.fire({ icon:'error', title:'Error', text: err.message });
         document.getElementById('visorContainer').style.display = 'none';
     }
-});
-
-document.getElementById('prevPage').addEventListener('click', () => {
-    if (pageNum <= 1) return;
-    pageNum--;
-    renderPage(pageNum);
-});
-
-document.getElementById('nextPage').addEventListener('click', () => {
-    if (pageNum >= pdfDoc.numPages) return;
-    pageNum++;
-    renderPage(pageNum);
-});
-
-document.getElementById('zoomIn').addEventListener('click', () => {
-    scale += 0.2;
-    renderPage(pageNum);
-});
-
-document.getElementById('zoomOut').addEventListener('click', () => {
-    if(scale <= 0.4) return;
-    scale -= 0.2;
-    renderPage(pageNum);
 });
 </script>
 </body>

@@ -4,6 +4,8 @@ import requests
 from datetime import datetime
 import hashlib
 import os
+from io import BytesIO
+from PIL import Image
 
 app = Flask(__name__)
 app.secret_key = 'clave_super_secreta'
@@ -82,7 +84,6 @@ def index():
         if res.status_code == 200 and "estadoCuenta" in data:
             estado_cuenta = data["estadoCuenta"]
 
-            # ----------------- LOGICA PARA PAGOS AGRUPADOS POR CUOTA -----------------
             resultado = {}
             cuota_base = float(estado_cuenta.get("cuota", 0))
 
@@ -121,6 +122,7 @@ def index():
                         break
 
             return render_template("resultado.html", datos=estado_cuenta, resultado=resultado)
+
         else:
             mensaje = data.get("mensaje", ["Error desconocido"])[0]
             return render_template("resultado.html", error=mensaje, http=res.status_code)
@@ -128,41 +130,65 @@ def index():
     fecha_actual_iso = datetime.now().strftime("%Y-%m-%d")
     return render_template("index.html", fecha_actual_iso=fecha_actual_iso)
 
-# ------------------ DOCUMENTOS ------------------
+# ------------------ DESCARGA / VISUALIZADOR ------------------
+@app.route('/descargar/<id>')
+def descargar(id):
+    if 'usuario' not in session:
+        return "No autorizado", 403
+
+    tipo = request.args.get('tipo', 'INE')
+
+    try:
+        if tipo == 'INE':
+            url_frente = f"http://54.167.121.148:8081/s3/downloadS3File?fileName=INE/{id}_frente.jpeg"
+            url_reverso = f"http://54.167.121.148:8081/s3/downloadS3File?fileName=INE/{id}_reverso.jpeg"
+
+            r1 = requests.get(url_frente)
+            r2 = requests.get(url_reverso)
+
+            if r1.status_code == 200 and r2.status_code == 200:
+                img1 = Image.open(BytesIO(r1.content)).convert("RGB")
+                img2 = Image.open(BytesIO(r2.content)).convert("RGB")
+
+                pdf_bytes = BytesIO()
+                img1.save(pdf_bytes, format='PDF', save_all=True, append_images=[img2])
+                pdf_bytes.seek(0)
+
+                return Response(
+                    pdf_bytes.read(),
+                    mimetype='application/pdf',
+                    headers={"Content-Disposition": f"inline; filename={id}_INE.pdf"}
+                )
+            else:
+                return "Error al obtener INE", 404
+
+        elif tipo == 'Otro 1':
+            url = f"http://54.167.121.148:8081/s3/downloadS3File?fileName=CEP/{id}_cep.jpeg"
+            r = requests.get(url)
+            if r.status_code == 200:
+                return Response(r.content, mimetype='image/jpeg')
+            return "Error al obtener CEP", 404
+
+        elif tipo == 'Contrato':
+            url = f"http://54.167.121.148:8081/s3/downloadS3File?fileName=VALIDACIONES/{id}_validaciones.pdf"
+            r = requests.get(url)
+            if r.status_code == 200:
+                return Response(r.content, mimetype='application/pdf')
+            return "Error al obtener contrato", 404
+
+        else:
+            return "Tipo de documento no válido", 400
+
+    except Exception as e:
+        return f"Error al procesar documento: {e}", 500
+
+# ------------------ PÁGINA DE CONSULTA ------------------
 @app.route('/documentos', methods=['GET', 'POST'])
 def documentos():
     if 'usuario' not in session:
         return redirect('/login')
-
-    if request.method == 'POST':
-        id_credito = request.form['idCredito']
-        documentos_data = [
-            {"tipo": "Comprobante de Pago", "fecha": "2023-06-22", "archivo": "comprobante_10584.pdf"},
-            {"tipo": "Estado de Cuenta", "fecha": "2023-06-20", "archivo": "estado_10584.pdf"}
-        ]
-        return render_template("resultado_documentos.html", id_credito=id_credito, documentos=documentos_data)
-
     return render_template("consulta_documentos.html")
 
-# ------------------ PROXY PARA PDF ------------------
-@app.route('/descargar/<int:id_credito>')
-def descargar(id_credito):
-    url = f"http://54.167.121.148:8081/s3/downloadS3File?fileName=FACTURA/{id_credito}_factura.pdf"
-    try:
-        r = requests.get(url, stream=True, timeout=20)
-    except Exception as e:
-        return f"Error al conectar al servidor de documentos: {str(e)}", 500
-
-    if r.status_code == 200:
-        return Response(
-            r.iter_content(chunk_size=8192),
-            mimetype="application/pdf",
-            headers={"Content-Disposition": f"inline; filename={id_credito}_factura.pdf"}
-        )
-    else:
-        return f"Error al obtener factura de {id_credito}", r.status_code
-
-# ------------------ RUN ------------------
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))
     app.run(host="0.0.0.0", port=port)
