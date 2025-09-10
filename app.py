@@ -130,6 +130,27 @@ def index():
     fecha_actual_iso = datetime.now().strftime("%Y-%m-%d")
     return render_template("index.html", fecha_actual_iso=fecha_actual_iso)
 
+@app.route('/documentos', methods=['GET', 'POST'])
+def documentos():
+    if 'usuario' not in session:
+        return redirect('/login')
+
+    if request.method == 'POST':
+        id_credito = request.form['idCredito']
+        # Aquí podrías agregar lógica para consultar documentos desde la API o BD
+        # Por ejemplo, payload = {"idCredito": int(id_credito)}
+        # res = requests.post(DOCUMENTS_ENDPOINT, json=payload, headers=headers)
+
+        # Por ahora, vamos a simular respuesta
+        documentos_data = [
+            {"tipo": "Comprobante de Pago", "fecha": "2023-06-22", "archivo": "comprobante_10584.pdf"},
+            {"tipo": "Estado de Cuenta", "fecha": "2023-06-20", "archivo": "estado_10584.pdf"}
+        ]
+
+        return render_template("resultado_documentos.html", id_credito=id_credito, documentos=documentos_data)
+
+    return render_template("consulta_documentos.html")
+
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))
