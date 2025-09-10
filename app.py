@@ -150,6 +150,10 @@ def descargar(id):
                 img1 = Image.open(BytesIO(r1.content)).convert("RGB")
                 img2 = Image.open(BytesIO(r2.content)).convert("RGB")
 
+                # mejorar nitidez para PDF
+                img1.info['dpi'] = (150, 150)
+                img2.info['dpi'] = (150, 150)
+
                 pdf_bytes = BytesIO()
                 img1.save(pdf_bytes, format='PDF', save_all=True, append_images=[img2])
                 pdf_bytes.seek(0)
