@@ -137,8 +137,8 @@
         <thead class="table-dark">
           <tr>
             <th>Número de Cuota</th>
-            <th>Fecha Registro</th>
-            <th>Pagos (ID – Fecha Valor – Monto aplicado)</th>
+            <th>Fecha Pago</th>
+            <th>Fecha Pago cliente</th>
             <th>Monto del Pago</th>
             <th>Total Aplicado</th>
             <th>Excedente</th>
@@ -150,15 +150,6 @@
           {% for cuota, pagos in resultado.items() %}
           <tr>
             <td><strong>{{ cuota }}</strong></td>
-
-            <td>
-              <ul class="list-unstyled mb-0">
-                {% for pago in pagos %}
-                  <li><strong>Fecha:</strong> {{ pago.fechaRegistro }}</li>
-                {% endfor %}
-              </ul>
-            </td>
-
             <td>
               <ul class="list-unstyled mb-0">
                 {% for pago in pagos %}
@@ -170,6 +161,15 @@
                 {% endfor %}
               </ul>
             </td>
+            <td>
+              <ul class="list-unstyled mb-0">
+                {% for pago in pagos %}
+                  <li><strong>Fecha:</strong> {{ pago.fechaRegistro }}</li>
+                {% endfor %}
+              </ul>
+            </td>
+
+           
 
             <td>{{ pagos[0].montoPago_original }}</td>
             <td>${{ "{:,.2f}".format(pagos | sum(attribute="aplicado")) }}</td>
