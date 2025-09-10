@@ -8,6 +8,7 @@
 
     <!-- PDF.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.12.313/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.12.313/pdf.worker.min.js"></script>
 
     <style>
         body { background-color: #f8fafc; }
@@ -39,17 +40,25 @@
 </div>
 
 <script>
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.12.313/pdf.worker.min.js';
+
 document.getElementById('formConsulta').addEventListener('submit', async function(e) {
     e.preventDefault();
     const id = document.getElementById('idDocumento').value.trim();
     if (!id) return;
+
     const url = `/descargar/${id}`;
 
+    // Comprobar si el PDF existe
     try {
         const headResp = await fetch(url, { method: 'HEAD' });
         if (!headResp.ok) throw new Error('Archivo no encontrado');
     } catch (error) {
-        Swal.fire({ icon:'error', title:'Archivo no encontrado', text:'No se encontró el archivo con el ID proporcionado.' });
+        Swal.fire({
+            icon:'error',
+            title:'Archivo no encontrado',
+            text:'No se encontró el archivo con el ID proporcionado.'
+        });
         document.getElementById('visorContainer').style.display = 'none';
         return;
     }
@@ -58,12 +67,11 @@ document.getElementById('formConsulta').addEventListener('submit', async functio
     container.innerHTML = '';
     document.getElementById('visorContainer').style.display = 'block';
 
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.12.313/pdf.worker.min.js';
     const loadingTask = pdfjsLib.getDocument(url);
     loadingTask.promise.then(pdf => {
-        for (let pageNum=1; pageNum<=pdf.numPages; pageNum++){
-            pdf.getPage(pageNum).then(page=>{
-                const viewport = page.getViewport({scale:1.5});
+        for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+            pdf.getPage(pageNum).then(page => {
+                const viewport = page.getViewport({ scale: 1.5 });
                 const canvas = document.createElement('canvas');
                 container.appendChild(canvas);
                 const context = canvas.getContext('2d');
@@ -72,7 +80,7 @@ document.getElementById('formConsulta').addEventListener('submit', async functio
                 page.render({ canvasContext: context, viewport: viewport });
             });
         }
-    }).catch(err=>{
+    }).catch(err => {
         Swal.fire({ icon:'error', title:'Error al cargar PDF', text: err.message });
         document.getElementById('visorContainer').style.display = 'none';
     });
