@@ -160,7 +160,7 @@ def descargar(id_credito):
 
     if r.status_code == 200:
         return Response(
-            r.content,
+            r.iter_content(chunk_size=8192),
             mimetype="application/pdf",
             headers={"Content-Disposition": f"inline; filename={id_credito}_factura.pdf"}
         )
