@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, redirect, session, Response
 import mysql.connector
 import requests
-from datetime import datetime
+from datetime import datetime, timedelta
 import hashlib
 import os
 from io import BytesIO
@@ -57,7 +57,7 @@ def _parse_cuotas_field(value):
 def procesar_estado_cuenta(estado_cuenta):
     """
     Devuelve una lista de cuotas con pagos aplicados correctamente,
-    distribuyendo excedentes y dejando Monto Pago = 0 en cuotas posteriores del mismo pago.
+    manteniendo las fechas originales de cada cargo y distribuyendo excedentes.
     """
     cargos = estado_cuenta.get("datosCargos", []) or []
     pagos = estado_cuenta.get("datosPagos", []) or []
@@ -71,20 +71,14 @@ def procesar_estado_cuenta(estado_cuenta):
         cuotas = _parse_cuotas_field(p.get("numeroCuotaSemanal"))
         pagos_list.append({
             "idPago": p.get("idPago"),
-            "montoPagoOriginal": monto_pago,
             "remaining": monto_pago,
             "cuotas": cuotas,
             "fechaValor": p.get("fechaValor"),
             "fechaRegistro": p.get("fechaRegistro"),
-            "raw": p
+            "montoPagoOriginal": monto_pago
         })
 
-    def cargo_sort_key(c):
-        try:
-            return int(c.get("idCargo", 0))
-        except:
-            return c.get("fechaVencimiento", "")
-    cargos_sorted = sorted(cargos, key=cargo_sort_key)
+    cargos_sorted = sorted(cargos, key=lambda c: int(c.get("idCargo", 0)))
 
     pagos_por_cuota_index = {}
     for pago in pagos_list:
@@ -97,10 +91,7 @@ def procesar_estado_cuenta(estado_cuenta):
         concepto = cargo.get("concepto", "")
         cuota_num = _extraer_numero_cuota(concepto)
         if cuota_num is None:
-            try:
-                cuota_num = int(cargo.get("idCargo"))
-            except:
-                continue
+            cuota_num = int(cargo.get("idCargo", 0))
 
         monto_cargo = float(cargo.get("monto", 0) or 0)
         capital = float(cargo.get("capital", 0) or 0)
@@ -112,29 +103,26 @@ def procesar_estado_cuenta(estado_cuenta):
         aplicados = []
 
         pagos_relacionados = pagos_por_cuota_index.get(cuota_num, [])
-        def pago_key(p):
-            fr = p.get("fechaRegistro")
-            if fr:
-                try:
-                    return datetime.strptime(fr, "%Y-%m-%d %H:%M:%S")
-                except:
-                    pass
-            return p.get("idPago", 0)
-        pagos_relacionados_sorted = sorted(pagos_relacionados, key=pago_key)
+        # Ordenar por fechaRegistro; si no existe, usar idPago
+        pagos_relacionados_sorted = sorted(
+            pagos_relacionados,
+            key=lambda p: datetime.strptime(p["fechaRegistro"], "%Y-%m-%d %H:%M:%S") 
+                          if p.get("fechaRegistro") 
+                          else (datetime.min + timedelta(seconds=int(p.get("idPago", 0))))
+        )
 
         for pago in pagos_relacionados_sorted:
             if monto_restante_cargo <= 0 or pago["remaining"] <= 0:
                 continue
 
             aplicar = min(pago["remaining"], monto_restante_cargo)
-            mostrar_monto = pago["montoPagoOriginal"] if pago["remaining"] == pago["montoPagoOriginal"] else 0.0
 
             aplicados.append({
                 "idPago": pago["idPago"],
-                "montoPago": round(mostrar_monto, 2),
+                "montoPago": round(pago["remaining"], 2),
                 "aplicado": round(aplicar, 2),
                 "fechaRegistro": pago.get("fechaRegistro"),
-                "fechaPago": pago.get("fechaValor"),
+                "fechaPago": fecha_venc,  # Mantener fecha original del cargo
                 "diasMora": None
             })
 
@@ -234,3 +222,4 @@ def index():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))
     app.run(host="0.0.0.0", port=port)
+

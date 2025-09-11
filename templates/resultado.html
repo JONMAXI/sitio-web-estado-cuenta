@@ -1,10 +1,12 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <title>Resultado Estado de Cuenta</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
-  <style>
+<meta charset="UTF-8">
+<title>Resultado Estado de Cuenta</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" integrity="sha512..." crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+<style>
     body { background-color: #f8f9fa; }
     .logo { max-height: 60px; }
     .header-bar { background-color: white; padding: 1rem 2rem; box-shadow: 0 0 10px rgba(0,0,0,0.05); }
@@ -12,10 +14,9 @@
     .btn-custom { background-color: #0d6efd; color: white; font-weight: 500; }
     .btn-custom:hover { background-color: #084298; }
     h5.section-title { margin-top: 2rem; color: #495057; }
-  </style>
+</style>
 </head>
 <body>
-
 <div class="header-bar d-flex justify-content-between align-items-center">
   <div class="d-flex align-items-center">
     <img src="https://maxikash.mx/cdn/shop/files/Logotipo-Maxikash-Outline.png?v=1749328460" alt="Logo" class="logo me-3">
@@ -24,152 +25,192 @@
   {% if session.get('usuario') %}
   <div class="text-end">
     <small class="text-secondary">
-      Bienvenido {{ session['usuario']['nombre_completo'] }} – {{ session['usuario']['puesto'] }} ({{ session['usuario']['grupo'] }})
+      <!-- Datos generales DE INICIO DE SESION -->
     </small>
   </div>
   {% endif %}
 </div>
 
-<div class="container table-container">
+<div class="container">
+    {% if error %}
+        <div class="alert alert-danger">{{ error }}</div>
+    {% endif %}
 
-  {% if error %}
-    <div class="alert alert-danger">
-      <strong>Error:</strong> {{ error }} <br/>
-      Código HTTP: {{ http }}
-    </div>
-    <a href="/" class="btn btn-secondary mt-3">Volver</a>
-  {% else %}
-    <div class="d-flex justify-content-end mt-4">
-      <a href="/" class="btn btn-custom">Nueva Consulta</a>
-    </div>
+    <div class="table-container mt-3">
+        <div class="d-flex justify-content-end mt-4">
+            <a href="/" class="btn btn-custom">Nueva Consulta</a>
+        </div>
 
-    <!-- Datos generales -->
-    <h5 class="section-title">Datos Generales</h5>
-    <div class="table-responsive">
-      <table class="table table-bordered table-striped text-center align-middle">
-        <thead class="table-dark">
-          <tr>
-            <th>ID Crédito</th>
-            <th>Cuota</th>
-            <th>Monto Otorgado</th>
-            <th>Fecha Inicio</th>
-            <th>Primer Vencimiento</th>
-            <th>Último Vencimiento</th>
-            <th>Status Crédito</th>
-            <th>Referencia STP</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>{{ datos.idCredito }}</td>
-            <td>${{ datos.cuota }}</td>
-            <td>${{ "{:,.2f}".format(datos.montoOtorgado) }}</td>
-            <td>{{ datos.fechaInicio }}</td>
-            <td>{{ datos.primerVencimiento }}</td>
-            <td>{{ datos.ultimoVencimiento }}</td>
-            <td>{{ datos.statusCredito }}</td>
-            <td>{{ datos.referenciaSTP }}</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-
-    <!-- Datos del cliente -->
-    <h5 class="section-title">Datos del Cliente</h5>
-    <table class="table table-bordered table-striped text-center align-middle">
-      <tbody>
-        <tr>
-          <th>Nombre</th>
-          <td>{{ datos.datosCliente.nombreCliente }}</td>
-        </tr>
-        <tr>
-          <th>Días Mora Máximo</th>
-          <td>{{ datos.datosSaldos.diasMoraMaximo }}</td>
-        </tr>
-        <tr>
-          <th>Cuotas Contratadas</th>
-          <td>{{ datos.datosSaldos.cuotasContratadas }}</td>
-        </tr>
-        <tr>
-          <th>Cuotas Pagadas</th>
-          <td>{{ datos.datosSaldos.cuotasPagadas }}</td>
-        </tr>
-        <tr>
-          <th>Saldo Para Liquidar</th>
-          <td>{{ datos.datosSaldos.saldoParaLiquidarV2 }}</td>
-        </tr>
-        <tr>
-          <th>Saldo Total Vencido</th>
-          <td>{{ datos.datosSaldos.saldoTotalVencido }}</td>
-        </tr>
-      </tbody>
-    </table>
-
-    <!-- Tabla de pagos cruzada con excedentes -->
-    <h5 class="section-title">Pagos por Cuota</h5>
-    <table class="table table-bordered table-striped table-hover align-middle text-center">
-        <thead class="table-dark">
-            <tr>
+        <!-- Datos generales -->
+        <h5 class="section-title">Datos Generales</h5>
+        <div class="table-responsive">
+          <table class="table table-bordered table-striped text-center align-middle">
+            <thead class="table-dark">
+              <tr>
+                <th>ID Crédito</th>
                 <th>Cuota</th>
-                <th>ID Pago</th>
-                <th>Fecha Pago Cliente</th>
-                <th>Fecha Registro</th>
-                <th>Monto Pago</th>
-                <th>Aplicado a Cuota</th>
-                <th>Excedente</th>
-                <th>Días Mora</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for fila in resultado %}
-                {% for pago in fila.aplicados %}
+                <th>Monto Otorgado</th>
+                <th>Fecha Inicio</th>
+                <th>Primer Vencimiento</th>
+                <th>Último Vencimiento</th>
+                <th>Status Crédito</th>
+                <th>Referencia STP</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>{{ datos.idCredito }}</td>
+                <td>${{ datos.cuota }}</td>
+                <td>${{ "{:,.2f}".format(datos.montoOtorgado) }}</td>
+                <td>{{ datos.fechaInicio }}</td>
+                <td>{{ datos.primerVencimiento }}</td>
+                <td>{{ datos.ultimoVencimiento }}</td>
+                <td>{{ datos.statusCredito }}</td>
+                <td>{{ datos.referenciaSTP }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+     <!-- Datos del cliente -->
+<h5 class="section-title">Datos del Cliente</h5>
+<table class="table table-bordered table-striped text-center align-middle">
+  <tbody>
+    <tr>
+      <th>Nombre</th>
+      <td><i class="fa-solid fa-user me-2"></i> {{ datos.datosCliente.nombreCliente }}</td>
+    </tr>
+    <tr>
+      <th>Días Mora Máximo</th>
+      <td><strong>{{ datos.datosSaldos.diasMoraMaximo }} días de mora</strong></td>
+    </tr>
+    <tr>
+      <th>Cuotas Contratadas</th>
+      <td><strong>{{ datos.datosSaldos.cuotasContratadas }} cuotas</strong></td>
+    </tr>
+    <tr>
+      <th>Cuotas Pagadas</th>
+      <td><strong>{{ datos.datosSaldos.cuotasPagadas }} cuotas</strong></td>
+    </tr>
+    <tr>
+      <th>Saldo Para Liquidar</th>
+      <td><strong>${{ "{:,.2f}".format(datos.datosSaldos.saldoParaLiquidarV2) }}</strong> </td>
+    </tr>
+    <tr>
+      <th>Saldo Total Vencido</th>
+      <td><strong>${{ "{:,.2f}".format(datos.datosSaldos.saldoTotalVencido) }}</strong></td>
+    </tr>
+  </tbody>
+</table>
+
+        <!-- Tabla de cuotas -->
+        <table class="table table-bordered table-striped">
+            <thead class="table-dark">
+                <tr>
+                    <th>Cuota</th>
+                    <th>Fecha</th>
+                    <th>Pago a Realizar</th>
+                    <th>Pagos Realizados por el cliente y Excedentes</th>
+                    <th>Total Aplicado</th>
+                    <th>Pendiente</th>
+                    <th>Días de Mora</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for fila in resultado %}
                 <tr>
                     <td>{{ fila.cuota }}</td>
-                    <td>{{ pago.idPago }}</td>
-                    <td>{{ pago.fechaPago }}</td>
-                    <td>{{ pago.fechaRegistro }}</td>
-                    <td>${{ "{:,.2f}".format(pago.montoPago) }}</td>
-                    <td>${{ "{:,.2f}".format(pago.aplicado) }}</td>
+                    <td class="fecha-cuota">{{ fila.fecha }}</td>
+                    <td>${{ '%.2f'|format(fila.monto_cargo) }}</td>
                     <td>
-                    {% if pago.montoPago > 0 %}
-                    ${{ "{:,.2f}".format(pago.montoPago - pago.aplicado) }}
-                    {% else %}
-                    $0.00
-                    {% endif %}
+                        <table class="table table-sm table-bordered mb-0 pagos-table">
+                            <thead>
+                                <tr>
+                                    <th>Pago</th>
+                                    <th>Aplicado</th>
+                                    <th>Fecha de Pago</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for pago in fila.aplicados %}
+                                <tr>
+                                    <td>${{ '%.2f'|format(pago.montoPago) }}</td>
+                                    <td>${{ '%.2f'|format(pago.aplicado) }}</td>
+                                    <td class="fecha-pago">{{ pago.fechaRegistro }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
                     </td>
-                    <td>{{ pago.diasMora if pago.diasMora is not none else '' }}</td>
+                    <td>${{ '%.2f'|format(fila.total_pagado) }}</td>
+                    <td>${{ '%.2f'|format(fila.pendiente) }}</td>
+                    <td class="dias-mora"></td>
                 </tr>
                 {% endfor %}
-            {% endfor %}
-        </tbody>
-    </table>
+            </tbody>
+        </table>
 
-    <div class="d-flex justify-content-end mt-4">
-      <a href="/" class="btn btn-custom">Nueva Consulta</a>
     </div>
 
-  {% endif %}
-
+    <div class="d-flex justify-content-end mt-4"></div>
 </div>
 
 <!-- Botones de scroll -->
 <button id="scrollBottomBtn" class="btn btn-secondary rounded-circle"
-  style="position: fixed; bottom: 30px; right: 30px; width: 50px; height: 50px; z-index: 1000;">
-  ⬇️
-</button>
+  style="position: fixed; bottom: 30px; right: 30px; width: 50px; height: 50px; z-index: 1000;">⬇️</button>
 <button id="scrollTopBtn" class="btn btn-secondary rounded-circle"
-  style="position: fixed; bottom: 90px; right: 30px; width: 50px; height: 50px; z-index: 1000;">
-  ⬆️
-</button>
+  style="position: fixed; bottom: 90px; right: 30px; width: 50px; height: 50px; z-index: 1000;">⬆️</button>
 
 <script>
+  // Scroll
   document.getElementById("scrollBottomBtn").addEventListener("click", function () {
     window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
   });
   document.getElementById("scrollTopBtn").addEventListener("click", function () {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   });
-</script>
 
+  // Calcular días de mora / anticipado
+  document.addEventListener("DOMContentLoaded", function() {
+      document.querySelectorAll("table.table-bordered.table-striped tbody tr").forEach(function(row) {
+          const fechaCuotaElem = row.querySelector(".fecha-cuota");
+          if (!fechaCuotaElem) return;
+          const fechaCuota = new Date(fechaCuotaElem.textContent);
+
+          const pagos = row.querySelectorAll(".pagos-table .fecha-pago");
+          if (pagos.length === 0) return;
+
+          let ultimaFechaPago = null;
+          pagos.forEach(p => {
+              const f = new Date(p.textContent);
+              if (!ultimaFechaPago || f > ultimaFechaPago) ultimaFechaPago = f;
+          });
+          if (!ultimaFechaPago) return;
+
+          const diffMs = ultimaFechaPago - fechaCuota;
+          const diffDias = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+          const diasMoraElem = row.querySelector(".dias-mora");
+          const badge = document.createElement("span");
+          badge.classList.add("badge");
+          badge.style.fontSize = "1rem";
+          badge.style.fontWeight = "500";
+          badge.style.padding = "0.5em";
+
+          if (diffDias > 0) {
+              badge.textContent = diffDias + " días de mora";
+              badge.classList.add("bg-danger");
+          } else if (diffDias < 0) {
+              badge.textContent = "Pago anticipado " + Math.abs(diffDias) + " días";
+              badge.classList.add("bg-success");
+          } else {
+              badge.textContent = "Sin mora";
+              badge.classList.add("bg-secondary");
+          }
+
+          diasMoraElem.appendChild(badge);
+      });
+  });
+</script>
 </body>
 </html>
