@@ -1,18 +1,19 @@
-# Usa una imagen base oficial con Python
+# Usa una imagen ligera de Python
 FROM python:3.11-slim
 
-# Establece el directorio de trabajo
+# Evita buffering de logs
+ENV PYTHONUNBUFFERED=1
+ENV PORT=8080
+
+# Carpeta de trabajo
 WORKDIR /app
 
-# Copia los archivos del proyecto al contenedor
-COPY . /app
-
-# Instala dependencias
+# Copia requirements y instala dependencias
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Expone el puerto usado por Flask
-ENV PORT=8080
-EXPOSE 8080
+# Copia el código fuente
+COPY . .
 
-# Comando para correr la app
+# Ejecuta Flask
 CMD ["python", "app.py"]
