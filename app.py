@@ -25,7 +25,6 @@ ENDPOINT = "https://servicios.s2movil.net/s2maxikash/estadocuenta"
 
 # ------------------ UTILIDADES ------------------
 def _extraer_numero_cuota(concepto):
-    """Extrae el número de cuota desde el texto del concepto"""
     if not concepto:
         return None
     m = re.search(r'CUOTA.*?(\d+)\s+DE', concepto, re.IGNORECASE)
@@ -37,7 +36,6 @@ def _extraer_numero_cuota(concepto):
     return None
 
 def _parse_cuotas_field(value):
-    """Convierte '1,2' o 3 en lista de ints [1,2]"""
     if value is None:
         return []
     if isinstance(value, (int, float)):
@@ -55,10 +53,6 @@ def _parse_cuotas_field(value):
 
 # ------------------ PROCESAR ESTADO DE CUENTA ------------------
 def procesar_estado_cuenta(estado_cuenta):
-    """
-    Devuelve una lista de cuotas con pagos aplicados correctamente,
-    manteniendo las fechas originales de cada cargo y distribuyendo excedentes.
-    """
     cargos = estado_cuenta.get("datosCargos", []) or []
     pagos = estado_cuenta.get("datosPagos", []) or []
 
@@ -79,7 +73,6 @@ def procesar_estado_cuenta(estado_cuenta):
         })
 
     cargos_sorted = sorted(cargos, key=lambda c: int(c.get("idCargo", 0)))
-
     pagos_por_cuota_index = {}
     for pago in pagos_list:
         for cnum in pago["cuotas"]:
@@ -103,7 +96,6 @@ def procesar_estado_cuenta(estado_cuenta):
         aplicados = []
 
         pagos_relacionados = pagos_por_cuota_index.get(cuota_num, [])
-        # Ordenar por fechaRegistro; si no existe, usar idPago
         pagos_relacionados_sorted = sorted(
             pagos_relacionados,
             key=lambda p: datetime.strptime(p["fechaRegistro"], "%Y-%m-%d %H:%M:%S") 
@@ -122,7 +114,7 @@ def procesar_estado_cuenta(estado_cuenta):
                 "montoPago": round(pago["remaining"], 2),
                 "aplicado": round(aplicar, 2),
                 "fechaRegistro": pago.get("fechaRegistro"),
-                "fechaPago": fecha_venc,  # Mantener fecha original del cargo
+                "fechaPago": fecha_venc,
                 "diasMora": None
             })
 
@@ -191,58 +183,27 @@ def index():
     if request.method == 'POST':
         id_credito = request.form['idCredito']
         fecha_corte = request.form['fechaCorte'].strip()
-
-        # Validar formato de fecha
         try:
             datetime.strptime(fecha_corte, "%Y-%m-%d")
         except ValueError:
-            return render_template(
-                "index.html", 
-                error="Fecha inválida. Usa formato AAAA-MM-DD.", 
-                fecha_actual_iso=fecha_corte
-            )
+            return render_template("index.html", error="Fecha inválida. Usa formato AAAA-MM-DD.", fecha_actual_iso=fecha_corte)
 
         payload = {"idCredito": int(id_credito), "fechaCorte": fecha_corte}
         headers = {"Token": TOKEN, "Content-Type": "application/json"}
 
         try:
             res = requests.post(ENDPOINT, json=payload, headers=headers, timeout=15)
-        except requests.exceptions.RequestException as e:
-            return render_template("resultado.html", error=f"Error de conexión con el servidor: {e}")
-
-        # Manejo especial de status codes
-        if res.status_code == 500:
-            return render_template(
-                "resultado.html", 
-                error="El cliente no existe o el servidor no pudo procesar la solicitud.",
-                http=res.status_code
-            )
-
-        if res.status_code != 200:
-            return render_template(
-                "resultado.html", 
-                error=f"Error en la API externa ({res.status_code})",
-                http=res.status_code
-            )
-
-        # Intentar parsear JSON
-        try:
             data = res.json()
         except Exception:
-            return render_template(
-                "resultado.html", 
-                error="Respuesta no válida del servidor",
-                http=res.status_code
-            )
+            return render_template("resultado.html", error="Respuesta no válida del servidor")
 
-        # Validar estructura esperada
-        if "estadoCuenta" in data:
-            estado_cuenta = data["estadoCuenta"]
-            tabla = procesar_estado_cuenta(estado_cuenta)
-            return render_template("resultado.html", datos=estado_cuenta, resultado=tabla)
-        else:
-            mensaje = data.get("mensaje", ["Error desconocido"])[0]
-            return render_template("resultado.html", error=mensaje, http=res.status_code)
+        if res.status_code != 200 or "estadoCuenta" not in data:
+            mensaje = data.get("mensaje", ["Error desconocido"])[0] if data else "No se encontraron datos para este crédito"
+            return render_template("resultado.html", error=mensaje)
+
+        estado_cuenta = data["estadoCuenta"]
+        tabla = procesar_estado_cuenta(estado_cuenta)
+        return render_template("resultado.html", datos=estado_cuenta, resultado=tabla)
 
     fecha_actual_iso = datetime.now().strftime("%Y-%m-%d")
     return render_template("index.html", fecha_actual_iso=fecha_actual_iso)
@@ -261,9 +222,9 @@ def descargar(id):
             payload = {"idCredito": int(id), "fechaCorte": fecha_corte}
             headers = {"Token": TOKEN, "Content-Type": "application/json"}
             res = requests.post(ENDPOINT, json=payload, headers=headers)
-            data = res.json()
+            data = res.json() if res.ok else None
 
-            if res.status_code != 200 or "estadoCuenta" not in data:
+            if not data or "estadoCuenta" not in data:
                 return "Crédito no encontrado o sin datosCliente", 404
 
             idCliente = data["estadoCuenta"].get("datosCliente", {}).get("idCliente")
@@ -291,11 +252,7 @@ def descargar(id):
             img1.save(pdf_bytes, format='PDF', save_all=True, append_images=[img2])
             pdf_bytes.seek(0)
 
-            return Response(
-                pdf_bytes.read(),
-                mimetype='application/pdf',
-                headers={"Content-Disposition": f"inline; filename={id}_INE.pdf"}
-            )
+            return Response(pdf_bytes.read(), mimetype='application/pdf', headers={"Content-Disposition": f"inline; filename={id}_INE.pdf"})
 
         elif tipo == 'Otro 1':
             url = f"http://54.167.121.148:8081/s3/downloadS3File?fileName=CEP/{id}_cep.jpeg"
