@@ -272,7 +272,7 @@ def descargar(id):
             return "Tipo de documento no válido", 400
 
     except Exception as e:
-        return f"Error al procesar documento: {e}", 500
+        return f"Cliente no encontrado en la Base de Datos", 500
 
 # ------------------ PÁGINA DE CONSULTA DOCUMENTOS ------------------
 @app.route('/documentos', methods=['GET', 'POST'])
