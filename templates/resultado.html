@@ -3,28 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <title>Resultado Estado de Cuenta</title>
-
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
   <style>
     body { background-color: #f8f9fa; }
     .logo { max-height: 60px; }
-    .header-bar {
-      background-color: white;
-      padding: 1rem 2rem;
-      box-shadow: 0 0 10px rgba(0,0,0,0.05);
-    }
-    .table-container {
-      background: white;
-      border-radius: 8px;
-      padding: 2rem;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-      margin-top: 2rem;
-    }
-    .btn-custom {
-      background-color: #0d6efd;
-      color: white;
-      font-weight: 500;
-    }
+    .header-bar { background-color: white; padding: 1rem 2rem; box-shadow: 0 0 10px rgba(0,0,0,0.05); }
+    .table-container { background: white; border-radius: 8px; padding: 2rem; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-top: 2rem; }
+    .btn-custom { background-color: #0d6efd; color: white; font-weight: 500; }
     .btn-custom:hover { background-color: #084298; }
     h5.section-title { margin-top: 2rem; color: #495057; }
   </style>
@@ -136,21 +121,21 @@
             </tr>
         </thead>
         <tbody>
-            {% for cuota, pagos in resultado.items() %}
-                {% for pago in pagos %}
+            {% for fila in resultado %}
+                {% for pago in fila.aplicados %}
                 <tr>
-                    <td>{{ cuota }}</td>
+                    <td>{{ fila.cuota }}</td>
                     <td>{{ pago.idPago }}</td>
                     <td>{{ pago.fechaPago }}</td>
                     <td>{{ pago.fechaRegistro }}</td>
                     <td>${{ "{:,.2f}".format(pago.montoPago) }}</td>
                     <td>${{ "{:,.2f}".format(pago.aplicado) }}</td>
                     <td>
-                      {% if pago.excedente > 0 %}
-                        ${{ "{:,.2f}".format(pago.excedente) }}
-                      {% else %}
-                        $0.00
-                      {% endif %}
+                    {% if pago.montoPago > 0 %}
+                    ${{ "{:,.2f}".format(pago.montoPago - pago.aplicado) }}
+                    {% else %}
+                    $0.00
+                    {% endif %}
                     </td>
                     <td>{{ pago.diasMora if pago.diasMora is not none else '' }}</td>
                 </tr>
