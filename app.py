@@ -6,6 +6,7 @@ import hashlib
 import os
 from io import BytesIO
 from PIL import Image
+import re
 
 app = Flask(__name__)
 app.secret_key = 'clave_super_secreta'
@@ -21,6 +22,175 @@ db_config = {
 # ------------------ CONFIGURACIÓN API EXTERNA ------------------
 TOKEN = "3oJVoAHtwWn7oBT4o340gFkvq9uWRRmpFo7p"
 ENDPOINT = "https://servicios.s2movil.net/s2maxikash/estadocuenta"
+
+# ------------------ UTIL / PROCESAMIENTO DE PAGOS ------------------
+def _extraer_numero_cuota(concepto):
+    """
+    Intenta extraer el número de cuota desde el texto de concepto.
+    Ej: "CUOTA SEMANAL 5 DE 156" -> 5
+    """
+    if not concepto:
+        return None
+    # Buscar primer número que represente la cuota (antes de 'DE' si existe)
+    m = re.search(r'CUOTA.*?(\d+)\s+DE', concepto, re.IGNORECASE)
+    if m:
+        return int(m.group(1))
+    # si no coincide, buscar cualquier número aislado
+    m2 = re.search(r'(\d+)', concepto)
+    if m2:
+        return int(m2.group(1))
+    return None
+
+def _parse_cuotas_field(value):
+    """Convierte '1,2' o 3 o '3' en lista de ints [1,2]"""
+    if value is None:
+        return []
+    if isinstance(value, (int, float)):
+        try:
+            return [int(value)]
+        except Exception:
+            return []
+    if isinstance(value, str):
+        parts = [p.strip() for p in value.split(',') if p.strip() != ""]
+        out = []
+        for p in parts:
+            try:
+                out.append(int(p))
+            except:
+                pass
+        return out
+    return []
+
+def procesar_estado_cuenta(estado_cuenta):
+    """
+    Devuelve una lista (tabla) con cada cuota (cargo) y sus pagos aplicados,
+    pendiente y excedente.
+    """
+    cargos = estado_cuenta.get("datosCargos", []) or []
+    pagos = estado_cuenta.get("datosPagos", []) or []
+
+    # Normalizar y preparar pagos: calcular lista de cuotas que cada pago menciona,
+    # y campo 'remaining' para distribuir el monto entre múltiples cuotas.
+    pagos_list = []
+    for p in pagos:
+        try:
+            monto_pago = float(p.get("montoPago", 0) or 0)
+        except:
+            monto_pago = 0.0
+        cuotas = _parse_cuotas_field(p.get("numeroCuotaSemanal"))
+        # parse fechas si existen
+        fecha_valor = p.get("fechaValor")
+        fecha_registro = p.get("fechaRegistro")
+        pagos_list.append({
+            "idPago": p.get("idPago"),
+            "montoPagoOriginal": monto_pago,
+            "remaining": monto_pago,
+            "cuotas": cuotas,
+            "fechaValor": fecha_valor,
+            "fechaRegistro": fecha_registro,
+            "raw": p  # guardamos original si hace falta en template
+        })
+
+    # Ordenamos cargos por idCargo o por fecha de vencimiento (si existe)
+    def cargo_sort_key(c):
+        # preferir idCargo si existe
+        try:
+            return int(c.get("idCargo", 0))
+        except:
+            # fallback a fecha
+            return c.get("fechaVencimiento", "")
+    cargos_sorted = sorted(cargos, key=cargo_sort_key)
+
+    tabla = []
+    # Para acelerar búsqueda, también construimos index de pagos por cuota (pero
+    # usaremos la lista 'pagos_list' para respetar remaining)
+    pagos_por_cuota_index = {}
+    for pago in pagos_list:
+        for cnum in pago["cuotas"]:
+            pagos_por_cuota_index.setdefault(cnum, []).append(pago)
+
+    # Iteramos cada cargo y distribuimos pagos que mencionen esa cuota
+    for cargo in cargos_sorted:
+        concepto = cargo.get("concepto", "")
+        cuota_num = _extraer_numero_cuota(concepto)
+        # Si no pudimos extraer cuota, intentamos con idCargo o saltamos
+        if cuota_num is None:
+            try:
+                cuota_num = int(cargo.get("idCargo"))
+            except:
+                # si no hay numero, saltar el cargo
+                continue
+
+        monto_cargo = float(cargo.get("monto", 0) or 0)
+        capital = float(cargo.get("capital", 0) or 0)
+        interes = float(cargo.get("interes", 0) or 0)
+        # sumar seguros (si vienen separados)
+        seguro_bienes = float(cargo.get("seguroBienes", 0) or 0)
+        seguro_vida = float(cargo.get("seguroVida", 0) or 0)
+        seguro_desempleo = float(cargo.get("seguroDesempleo", 0) or 0)
+        seguro_total = seguro_bienes + seguro_vida + seguro_desempleo
+        fecha_venc = cargo.get("fechaVencimiento", "")
+
+        monto_restante_cargo = monto_cargo
+        aplicados = []  # lista de dicts {idPago, montoAplicado, montoPagoOriginal, fechaRegistro}
+
+        # Tomar pagos que mencionen esta cuota, ordenarlos por fechaRegistro asc (si posible)
+        pagos_relacionados = pagos_por_cuota_index.get(cuota_num, [])
+        # Orden por fechaRegistro (fallback por idPago)
+        def pago_key(p):
+            fr = p.get("fechaRegistro")
+            if fr:
+                try:
+                    return datetime.strptime(fr, "%Y-%m-%d %H:%M:%S")
+                except:
+                    pass
+            return p.get("idPago", 0)
+        pagos_relacionados_sorted = sorted(pagos_relacionados, key=pago_key)
+
+        # Distribuir montos desde cada pago al cargo hasta completar
+        for pago in pagos_relacionados_sorted:
+            if monto_restante_cargo <= 0:
+                break
+            if pago["remaining"] <= 0:
+                continue
+            aplicar = min(pago["remaining"], monto_restante_cargo)
+            if aplicar <= 0:
+                continue
+            # Registrar aplicación
+            aplicados.append({
+                "idPago": pago["idPago"],
+                "montoAplicado": round(aplicar, 2),
+                "montoPagoOriginal": round(pago["montoPagoOriginal"], 2),
+                "fechaRegistro": pago.get("fechaRegistro"),
+                "fechaValor": pago.get("fechaValor")
+            })
+            pago["remaining"] = round(pago["remaining"] - aplicar, 2)
+            monto_restante_cargo = round(monto_restante_cargo - aplicar, 2)
+
+        total_aplicado = round(monto_cargo - monto_restante_cargo, 2)
+        pendiente = round(max(monto_cargo - total_aplicado, 0.0), 2)
+        excedente = 0.0
+        # Si por alguna razón total_aplicado > monto_cargo (no debería con esta lógica)
+        if total_aplicado > monto_cargo:
+            excedente = round(total_aplicado - monto_cargo, 2)
+
+        tabla.append({
+            "cuota": cuota_num,
+            "fecha": fecha_venc,
+            "monto_cargo": round(monto_cargo, 2),
+            "capital": round(capital, 2),
+            "interes": round(interes, 2),
+            "seguro": round(seguro_total, 2),
+            "aplicados": aplicados,            # lista de aplicaciones (posibles varios pagos)
+            "total_pagado": total_aplicado,
+            "pendiente": pendiente,
+            "excedente": excedente,
+            "raw_cargo": cargo
+        })
+
+    # opcional: ordenar tabla por cuota asc
+    tabla = sorted(tabla, key=lambda x: x["cuota"])
+    return tabla
 
 # ------------------ LOGIN ------------------
 @app.route('/login', methods=['GET', 'POST'])
@@ -83,70 +253,19 @@ def index():
             estado_cuenta = data["estadoCuenta"]
 
             # ------------------ PROCESAR PAGOS ------------------
-            resultado = {}
-            cuota_base = float(estado_cuenta.get("cuota", 0))
+            # Ahora usamos la función procesar_estado_cuenta para cruzar cargos y pagos
+            tabla = procesar_estado_cuenta(estado_cuenta)
 
-            # Historial global de excedentes por idPago
-            excedente_historial_global = {}
-
-            for pago in estado_cuenta.get("datosPagos", []):
-                cuotas = str(pago.get("numeroCuotaSemanal", "0")).split(",")
-                monto_pago = float(pago.get("montoPago", 0))
-
-                try:
-                    fecha_valor = datetime.strptime(pago["fechaValor"], "%Y-%m-%d")
-                    fecha_registro = datetime.strptime(pago["fechaRegistro"], "%Y-%m-%d %H:%M:%S")
-                    dias_mora_pago = (fecha_registro.date() - fecha_valor.date()).days
-                except Exception:
-                    dias_mora_pago = None
-
-                for i, cuota in enumerate(cuotas):
-                    aplicado = min(monto_pago, cuota_base)
-                    excedente = max(0, monto_pago - cuota_base) if i == 0 else monto_pago
-
-                    # Revisar si ya mostramos este excedente para este idPago
-                    mostrar_monto = monto_pago
-                    if pago.get("idPago") in excedente_historial_global:
-                        if excedente_historial_global[pago["idPago"]] == excedente:
-                            mostrar_monto = 0
-                    else:
-                        excedente_historial_global[pago["idPago"]] = excedente
-
-                    pago_dict = {
-                        "idPago": pago.get("idPago"),
-                        "fechaPago": pago.get("fechaValor") or "",
-                        "fechaRegistro": pago.get("fechaRegistro") or "",
-                        "montoPago": mostrar_monto,
-                        "aplicado": aplicado,
-                        "excedente": excedente,
-                        "diasMora": dias_mora_pago if i == 0 else None
-                    }
-
-                    if cuota not in resultado:
-                        resultado[cuota] = []
-                    resultado[cuota].append(pago_dict)
-
-                    monto_pago -= aplicado
-                    if monto_pago <= 0:
-                        break
-
-            # ------------------ FILTRAR SOLO PAGOS CON APLICADO > 0 ------------------
-            resultado_filtrado = {}
-            for cuota, pagos in resultado.items():
-                pagos_con_aplicado = [p for p in pagos if p['aplicado'] > 0 or p['montoPago'] > 0 or p['excedente'] > 0]
-                if pagos_con_aplicado:
-                    resultado_filtrado[cuota] = pagos_con_aplicado
-
-            # ------------------ FILTRAR NOTAS DE CARGOS ------------------
+            # ------------------ FILTRAR NOTAS DE CARGOS (si aplica) ------------------
             cargos_pagados = []
             for nota in estado_cuenta.get("datosNotasCargos", []):
-                if float(nota.get("montoAplicado", 0)) > 0:
+                if float(nota.get("montoAplicado", 0) or 0) > 0:
                     cargos_pagados.append(nota)
 
             return render_template(
                 "resultado.html",
                 datos=estado_cuenta,
-                resultado=resultado_filtrado,
+                tabla=tabla,
                 cargos_pagados=cargos_pagados
             )
 
