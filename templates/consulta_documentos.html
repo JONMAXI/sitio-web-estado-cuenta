@@ -67,6 +67,15 @@ img.documento-imagen {
 .btn-custom:hover { 
     background-color: #084298; 
 }
+
+/* Loader */
+#loader {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
 </style>
 </head>
 <body>
@@ -78,7 +87,7 @@ img.documento-imagen {
   </div>
   {% if session.get('usuario') %}
   <div class="text-end">
-    <a href="/" class="btn btn-outline-primary logout-btn">Consulta Estado de C</a>
+    <a href="/" class="btn btn-outline-primary logout-btn">Consulta Estado de Cuenta</a>
     <a href="/logout" class="btn btn-outline-danger logout-btn">Cerrar sesión</a>
   </div>
   {% endif %}
@@ -95,7 +104,6 @@ img.documento-imagen {
                         <label for="idDocumento" class="form-label">ID Crédito / Persona</label>
                         <input type="text" class="form-control" id="idDocumento" required 
        pattern="\d{1,10}" maxlength="10" title="Solo números, máximo 10 dígitos">
-
                     </div>
                     <div class="mb-3">
                         <label for="tipoDocumento" class="form-label">Tipo de Documento</label>
@@ -115,6 +123,15 @@ img.documento-imagen {
         <div class="col-md-8" id="visorContainer" style="display:none;">
             <div class="card card-custom">
                 <h3 class="text-center mb-4">Visor de Documento</h3>
+
+                <!-- Loader -->
+                <div id="loader" style="display:none;">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Cargando...</span>
+                    </div>
+                    <div>Cargando documento...</div>
+                </div>
+
                 <div class="controls mb-2">
                     <button class="btn btn-sm btn-secondary me-1" id="zoomIn">+</button>
                     <button class="btn btn-sm btn-secondary" id="zoomOut">-</button>
@@ -134,7 +151,6 @@ let scale = 1.0;
 let currentPdf = null;
 let currentBlob = null;
 
-// Función para dibujar marca de agua repetida
 function drawWatermark(ctx, width, height, text = "SIN VALOR") {
     ctx.save();
     ctx.globalAlpha = 0.3;
@@ -181,15 +197,11 @@ async function renderPdf(blob) {
         ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
 
         await page.render({ canvasContext: ctx, viewport: viewport }).promise;
-
-        // Aplicar marca de agua
         drawWatermark(ctx, canvas.width, canvas.height);
-
         container.appendChild(canvas);
     }
 }
 
-// Renderizar imágenes con marca de agua
 function renderImageWithWatermark(blob) {
     container.innerHTML = '';
     const img = document.createElement('img');
@@ -221,22 +233,28 @@ document.getElementById('formConsulta').addEventListener('submit', async functio
 
     const url = `/descargar/${id}?tipo=${tipo}`;
 
+    // Mostrar loader
+    document.getElementById('loader').style.display = 'flex';
+    document.getElementById('visorContainer').style.display = 'block';
+    container.innerHTML = '';
+
     try {
         const res = await fetch(url);
         if (!res.ok) throw new Error(await res.text());
         const blob = await res.blob();
         currentBlob = blob;
-        document.getElementById('visorContainer').style.display = 'block';
 
         if (tipo === 'INE' || tipo === 'Contrato') {
             scale = 1.0;
-            renderPdf(blob);
+            await renderPdf(blob);
         } else {
             renderImageWithWatermark(blob);
         }
     } catch (err) {
         Swal.fire({ icon:'error', title:'Error', text: err.message });
         document.getElementById('visorContainer').style.display = 'none';
+    } finally {
+        document.getElementById('loader').style.display = 'none';
     }
 });
 </script>
