@@ -9,84 +9,163 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js"></script>
 
 <style>
-body { background-color: #f8fafc; }
-#pdfContainer { border:1px solid #ccc; padding:10px; text-align:center; background:#fff; }
-canvas { margin: 10px 0; border:1px solid #ddd; display:block; margin-left:auto; margin-right:auto; }
-.controls { margin-bottom:10px; }
-img.documento-imagen { max-width: 100%; margin-top:10px; border:1px solid #ddd; }
+body { background-color: #f8f9fa; }
+
+.header-bar {
+  background-color: white;
+  padding: 1rem 2rem;
+  box-shadow: 0 0 10px rgba(0,0,0,0.05);
+  margin-bottom: 2rem;
+}
+
+.logo { max-height: 60px; }
+
+.card-custom {
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    padding: 2rem;
+    background-color: #fff;
+    margin-bottom: 2rem;
+}
+
+#pdfContainer { 
+    border:1px solid #ccc; 
+    padding:10px; 
+    text-align:center; 
+    background:#fff; 
+    max-height: 600px; 
+    overflow-y: auto; 
+}
+
+canvas {
+    margin: 10px 0; 
+    border:1px solid #ddd; 
+    display:block; 
+    margin-left:auto; 
+    margin-right:auto;
+    width: 100% !important;
+    height: auto !important;
+}
+
+.controls { 
+    margin-bottom:10px; 
+    text-align:center; 
+}
+
+img.documento-imagen { 
+    max-width: 100%; 
+    margin-top:10px; 
+    border:1px solid #ddd; 
+}
+
+.btn-custom { 
+    background-color: #0d6efd; 
+    color: white; 
+    font-weight: 500; 
+    border-radius: 8px;
+}
+.btn-custom:hover { 
+    background-color: #084298; 
+}
 </style>
 </head>
 <body>
-<div class="container py-5">
-<h2 class="text-center mb-4">Consulta de Documentos</h2>
 
-<div class="row justify-content-center">
-    <div class="col-md-6">
-        <form id="formConsulta">
-            <div class="mb-3">
-                <label for="idDocumento" class="form-label">ID Crédito / Persona</label>
-                <input type="text" class="form-control" id="idDocumento" required>
-            </div>
-            <div class="mb-3">
-                <label for="tipoDocumento" class="form-label">Tipo de Documento</label>
-                <select id="tipoDocumento" class="form-select" required>
-                    <option value="INE">INE (Frente + Reverso)</option>
-                    <option value="Otro 1">Otro 1</option>
-                    <option value="Contrato">Contrato</option>
-                </select>
-            </div>
-            <button type="submit" class="btn btn-primary w-100">Buscar Documento</button>
-        </form>
-    </div>
+<div class="header-bar d-flex justify-content-between align-items-center">
+  <div class="d-flex align-items-center">
+    <img src="https://maxikash.mx/cdn/shop/files/Logotipo-Maxikash-Outline.png?v=1749328460" alt="Logo" class="logo me-3">
+    <h5 class="mb-0 text-secondary">Consulta de Documentos</h5>
+  </div>
+  {% if session.get('usuario') %}
+  <div class="text-end">
+    <a href="/" class="btn btn-outline-primary logout-btn">Consulta Estado de C</a>
+    <a href="/logout" class="btn btn-outline-danger logout-btn">Cerrar sesión</a>
+  </div>
+  {% endif %}
 </div>
 
-<div class="row mt-4" id="visorContainer" style="display:none;">
-    <div class="col-12">
-        <div class="controls mb-2" id="pdfControls" style="display:none;">
-            <button class="btn btn-sm btn-secondary" id="prevPage">Anterior</button>
-            <button class="btn btn-sm btn-secondary" id="nextPage">Siguiente</button>
-            <span>Página: <span id="pageNum">1</span> / <span id="pageCount">1</span></span>
-            <button class="btn btn-sm btn-secondary" id="zoomIn">+</button>
-            <button class="btn btn-sm btn-secondary" id="zoomOut">-</button>
+<div class="container py-4">
+    <!-- Formulario -->
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card card-custom">
+                <h3 class="text-center mb-4">Consulta Documentos</h3>
+                <form id="formConsulta" class="d-flex flex-column">
+                    <div class="mb-3">
+                        <label for="idDocumento" class="form-label">ID Crédito / Persona</label>
+                        <input type="text" class="form-control" id="idDocumento" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="tipoDocumento" class="form-label">Tipo de Documento</label>
+                        <select id="tipoDocumento" class="form-select" required>
+                            <option value="INE">INE (Frente + Reverso)</option>
+                            <option value="Otro 1">Otro 1</option>
+                            <option value="Contrato">Contrato</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-custom w-100 mt-3">Buscar Documento</button>
+                </form>
+            </div>
         </div>
-        <div id="pdfContainer"></div>
     </div>
-</div>
+
+    <!-- Visor de Documento -->
+    <div class="row justify-content-center">
+        <div class="col-md-8" id="visorContainer" style="display:none;">
+            <div class="card card-custom">
+                <h3 class="text-center mb-4">Visor de Documento</h3>
+                <div class="controls mb-2">
+                    <button class="btn btn-sm btn-secondary me-1" id="zoomIn">+</button>
+                    <button class="btn btn-sm btn-secondary" id="zoomOut">-</button>
+                </div>
+                <div id="pdfContainer"></div>
+            </div>
+        </div>
+    </div>
+
 </div>
 
 <script>
 const pdfjsLib = window['pdfjs-dist/build/pdf'];
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
 
-let pdfDoc = null, pageNum = 1, scale = 2.5;
-
 const container = document.getElementById('pdfContainer');
-const pageNumSpan = document.getElementById('pageNum');
-const pageCountSpan = document.getElementById('pageCount');
-const pdfControls = document.getElementById('pdfControls');
+let scale = 1.0;
+let currentPdf = null;
+let currentBlob = null;
 
-async function renderPage(num) {
-    const page = await pdfDoc.getPage(num);
-    const viewport = page.getViewport({ scale: scale });
-    const ratio = window.devicePixelRatio || 1;
-
+async function renderPdf(blob) {
+    currentPdf = await pdfjsLib.getDocument({ data: await blob.arrayBuffer() }).promise;
     container.innerHTML = '';
-    const canvas = document.createElement('canvas');
-    container.appendChild(canvas);
+    const containerWidth = container.clientWidth - 20;
 
-    canvas.width = viewport.width * ratio;
-    canvas.height = viewport.height * ratio;
-    canvas.style.width = viewport.width + 'px';
-    canvas.style.height = viewport.height + 'px';
+    for (let num = 1; num <= currentPdf.numPages; num++) {
+        const page = await currentPdf.getPage(num);
+        let viewport = page.getViewport({ scale: 1 }); 
+        let scaleFit = Math.min(scale, containerWidth / viewport.width);
+        viewport = page.getViewport({ scale: scaleFit });
 
-    const ctx = canvas.getContext('2d');
-    ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+        const ratio = window.devicePixelRatio || 1;
+        const canvas = document.createElement('canvas');
+        canvas.width = viewport.width * ratio;
+        canvas.height = viewport.height * ratio;
+        canvas.style.width = '100%';
+        canvas.style.height = 'auto';
 
-    await page.render({ canvasContext: ctx, viewport: viewport }).promise;
+        const ctx = canvas.getContext('2d');
+        ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+        await page.render({ canvasContext: ctx, viewport: viewport }).promise;
 
-    pageNumSpan.textContent = pageNum;
-    pageCountSpan.textContent = pdfDoc.numPages;
+        container.appendChild(canvas);
+    }
 }
+
+document.getElementById('zoomIn').onclick = () => { 
+    if(currentBlob){ scale *= 1.2; renderPdf(currentBlob); } 
+};
+document.getElementById('zoomOut').onclick = () => { 
+    if(currentBlob){ scale /= 1.2; renderPdf(currentBlob); } 
+};
 
 document.getElementById('formConsulta').addEventListener('submit', async function(e){
     e.preventDefault();
@@ -98,25 +177,16 @@ document.getElementById('formConsulta').addEventListener('submit', async functio
 
     try {
         const res = await fetch(url);
-        if (!res.ok) throw new Error("Documento no encontrado");
+        if (!res.ok) throw new Error(await res.text());
         const blob = await res.blob();
-
-        container.innerHTML = '';
+        currentBlob = blob;
         document.getElementById('visorContainer').style.display = 'block';
 
         if (tipo === 'INE' || tipo === 'Contrato') {
-            pdfDoc = await pdfjsLib.getDocument({ data: await blob.arrayBuffer() }).promise;
-            pageNum = 1;
-            scale = 2.5;
-            pdfControls.style.display = 'block';
-            await renderPage(pageNum);
-
-            document.getElementById('prevPage').onclick = () => { if(pageNum>1){pageNum--; renderPage(pageNum);} };
-            document.getElementById('nextPage').onclick = () => { if(pageNum<pdfDoc.numPages){pageNum++; renderPage(pageNum);} };
-            document.getElementById('zoomIn').onclick = () => { scale += 0.2; renderPage(pageNum); };
-            document.getElementById('zoomOut').onclick = () => { scale = Math.max(0.5, scale-0.2); renderPage(pageNum); };
+            scale = 1.0;
+            renderPdf(blob);
         } else {
-            pdfControls.style.display = 'none';
+            container.innerHTML = '';
             const img = document.createElement('img');
             img.src = URL.createObjectURL(blob);
             img.className = 'documento-imagen';

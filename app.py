@@ -12,10 +12,10 @@ app.secret_key = 'clave_super_secreta'
 
 # ------------------ CONFIGURACIÓN BASE DE DATOS ------------------
 db_config = {
-    'user': os.environ.get('DB_USER'),
-    'password': os.environ.get('DB_PASSWORD'),
-    'database': os.environ.get('DB_NAME'),
-    'unix_socket': f"/cloudsql/{os.environ.get('DB_CONNECTION_NAME')}"
+    'host': '34.9.147.5',
+    'user': 'jonathan',
+    'password': ')1>SbilQ,$VKr=hO',
+    'database': 'estado_cuenta'
 }
 
 # ------------------ CONFIGURACIÓN API EXTERNA ------------------
@@ -28,7 +28,6 @@ def login():
     if request.method == 'POST':
         username = request.form['username']
         password = hashlib.sha256(request.form['password'].encode()).hexdigest()
-
         try:
             conn = mysql.connector.connect(**db_config)
             cur = conn.cursor(dictionary=True)
@@ -73,7 +72,6 @@ def index():
 
         payload = {"idCredito": int(id_credito), "fechaCorte": fecha_corte}
         headers = {"Token": TOKEN, "Content-Type": "application/json"}
-
         res = requests.post(ENDPOINT, json=payload, headers=headers)
 
         try:
@@ -84,8 +82,12 @@ def index():
         if res.status_code == 200 and "estadoCuenta" in data:
             estado_cuenta = data["estadoCuenta"]
 
+            # ------------------ PROCESAR PAGOS ------------------
             resultado = {}
             cuota_base = float(estado_cuenta.get("cuota", 0))
+
+            # Historial global de excedentes por idPago
+            excedente_historial_global = {}
 
             for pago in estado_cuenta.get("datosPagos", []):
                 cuotas = str(pago.get("numeroCuotaSemanal", "0")).split(",")
@@ -102,15 +104,22 @@ def index():
                     aplicado = min(monto_pago, cuota_base)
                     excedente = max(0, monto_pago - cuota_base) if i == 0 else monto_pago
 
+                    # Revisar si ya mostramos este excedente para este idPago
+                    mostrar_monto = monto_pago
+                    if pago.get("idPago") in excedente_historial_global:
+                        if excedente_historial_global[pago["idPago"]] == excedente:
+                            mostrar_monto = 0
+                    else:
+                        excedente_historial_global[pago["idPago"]] = excedente
+
                     pago_dict = {
                         "idPago": pago.get("idPago"),
-                        "fecha": pago.get("fechaValor") or "",
+                        "fechaPago": pago.get("fechaValor") or "",
                         "fechaRegistro": pago.get("fechaRegistro") or "",
-                        "monto_pago": float(pago.get("montoPago", 0)),
-                        "montoPago_original": pago.get("montoPago"),
+                        "montoPago": mostrar_monto,
                         "aplicado": aplicado,
                         "excedente": excedente,
-                        "dias_mora": dias_mora_pago if i == 0 else None
+                        "diasMora": dias_mora_pago if i == 0 else None
                     }
 
                     if cuota not in resultado:
@@ -121,7 +130,25 @@ def index():
                     if monto_pago <= 0:
                         break
 
-            return render_template("resultado.html", datos=estado_cuenta, resultado=resultado)
+            # ------------------ FILTRAR SOLO PAGOS CON APLICADO > 0 ------------------
+            resultado_filtrado = {}
+            for cuota, pagos in resultado.items():
+                pagos_con_aplicado = [p for p in pagos if p['aplicado'] > 0 or p['montoPago'] > 0 or p['excedente'] > 0]
+                if pagos_con_aplicado:
+                    resultado_filtrado[cuota] = pagos_con_aplicado
+
+            # ------------------ FILTRAR NOTAS DE CARGOS ------------------
+            cargos_pagados = []
+            for nota in estado_cuenta.get("datosNotasCargos", []):
+                if float(nota.get("montoAplicado", 0)) > 0:
+                    cargos_pagados.append(nota)
+
+            return render_template(
+                "resultado.html",
+                datos=estado_cuenta,
+                resultado=resultado_filtrado,
+                cargos_pagados=cargos_pagados
+            )
 
         else:
             mensaje = data.get("mensaje", ["Error desconocido"])[0]
@@ -140,45 +167,59 @@ def descargar(id):
 
     try:
         if tipo == 'INE':
-            url_frente = f"http://54.167.121.148:8081/s3/downloadS3File?fileName=INE/{id}_frente.jpeg"
-            url_reverso = f"http://54.167.121.148:8081/s3/downloadS3File?fileName=INE/{id}_reverso.jpeg"
+            fecha_corte = datetime.now().strftime("%Y-%m-%d")
+            payload = {"idCredito": int(id), "fechaCorte": fecha_corte}
+            headers = {"Token": TOKEN, "Content-Type": "application/json"}
+            res = requests.post(ENDPOINT, json=payload, headers=headers)
+            data = res.json()
+
+            if res.status_code != 200 or "estadoCuenta" not in data:
+                return "Crédito no encontrado o sin datosCliente", 404
+
+            idCliente = data["estadoCuenta"].get("datosCliente", {}).get("idCliente")
+            if not idCliente:
+                return "No se encontró idCliente para este crédito", 404
+
+            url_frente = f"http://54.167.121.148:8081/s3/downloadS3File?fileName=INE/{idCliente}_frente.jpeg"
+            url_reverso = f"http://54.167.121.148:8081/s3/downloadS3File?fileName=INE/{idCliente}_reverso.jpeg"
 
             r1 = requests.get(url_frente)
             r2 = requests.get(url_reverso)
 
-            if r1.status_code == 200 and r2.status_code == 200:
-                img1 = Image.open(BytesIO(r1.content)).convert("RGB")
-                img2 = Image.open(BytesIO(r2.content)).convert("RGB")
+            faltantes = []
+            if r1.status_code != 200: faltantes.append("Frente")
+            if r2.status_code != 200: faltantes.append("Reverso")
+            if faltantes:
+                return f"No se encontraron los archivos: {', '.join(faltantes)}", 404
 
-                # mejorar nitidez para PDF
-                img1.info['dpi'] = (150, 150)
-                img2.info['dpi'] = (150, 150)
+            img1 = Image.open(BytesIO(r1.content)).convert("RGB")
+            img2 = Image.open(BytesIO(r2.content)).convert("RGB")
+            img1.info['dpi'] = (150, 150)
+            img2.info['dpi'] = (150, 150)
 
-                pdf_bytes = BytesIO()
-                img1.save(pdf_bytes, format='PDF', save_all=True, append_images=[img2])
-                pdf_bytes.seek(0)
+            pdf_bytes = BytesIO()
+            img1.save(pdf_bytes, format='PDF', save_all=True, append_images=[img2])
+            pdf_bytes.seek(0)
 
-                return Response(
-                    pdf_bytes.read(),
-                    mimetype='application/pdf',
-                    headers={"Content-Disposition": f"inline; filename={id}_INE.pdf"}
-                )
-            else:
-                return "Error al obtener INE", 404
+            return Response(
+                pdf_bytes.read(),
+                mimetype='application/pdf',
+                headers={"Content-Disposition": f"inline; filename={id}_INE.pdf"}
+            )
 
         elif tipo == 'Otro 1':
             url = f"http://54.167.121.148:8081/s3/downloadS3File?fileName=CEP/{id}_cep.jpeg"
             r = requests.get(url)
-            if r.status_code == 200:
-                return Response(r.content, mimetype='image/jpeg')
-            return "Error al obtener CEP", 404
+            if r.status_code != 200:
+                return "Archivo CEP no encontrado", 404
+            return Response(r.content, mimetype='image/jpeg')
 
         elif tipo == 'Contrato':
             url = f"http://54.167.121.148:8081/s3/downloadS3File?fileName=VALIDACIONES/{id}_validaciones.pdf"
             r = requests.get(url)
-            if r.status_code == 200:
-                return Response(r.content, mimetype='application/pdf')
-            return "Error al obtener contrato", 404
+            if r.status_code != 200:
+                return "Archivo Contrato no encontrado", 404
+            return Response(r.content, mimetype='application/pdf')
 
         else:
             return "Tipo de documento no válido", 400
@@ -186,7 +227,7 @@ def descargar(id):
     except Exception as e:
         return f"Error al procesar documento: {e}", 500
 
-# ------------------ PÁGINA DE CONSULTA ------------------
+# ------------------ PÁGINA DE CONSULTA DOCUMENTOS ------------------
 @app.route('/documentos', methods=['GET', 'POST'])
 def documentos():
     if 'usuario' not in session:

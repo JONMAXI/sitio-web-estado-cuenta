@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <title>Resultado Estado de Cuenta</title>
+  <title>Resultado Estado de Cuentas</title>
 
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
   <style>
@@ -130,116 +130,53 @@
       </tbody>
     </table>
 
-    <!-- Pagos por Cuota -->
-    <h4>Pagos por Cuota</h4>
-    <div class="table-responsive">
-      <table class="table table-bordered table-striped table-hover align-middle text-center">
+    <!-- Tabla de pagos con excedente aplicado una sola vez -->
+    <h5 class="section-title">Pagos</h5>
+    <table class="table table-bordered table-striped table-hover align-middle text-center">
         <thead class="table-dark">
-          <tr>
-            <th>Número de Cuota</th>
-            <th>Fecha Pago</th>
-            <th>Fecha Pago cliente</th>
-            <th>Monto del Pago</th>
-            <th>Total Aplicado</th>
-            <th>Excedente</th>
-            <th>Estatus</th>
-            <th>Días de Mora</th>
-          </tr>
+            <tr>
+                <th>Cuota</th>
+                <th>ID Pago</th>
+                <th>Fecha Pago</th>
+                <th>Monto Pago</th>
+                <th>Fecha Pago Cliente</th>
+                <th>CUOTA</th>
+                <th>Excedente</th>
+                <th>Días Mora</th>
+            </tr>
         </thead>
         <tbody>
-          {% for cuota, pagos in resultado.items() %}
-          <tr>
-            <td><strong>{{ cuota }}</strong></td>
-            <td>
-              <ul class="list-unstyled mb-0">
+            {% set pagados_excedentes = {} %}
+            {% for cuota, pagos in resultado.items() %}
                 {% for pago in pagos %}
-                  <li>
-                    <strong>ID:</strong> {{ pago.idPago }} – 
-                    <strong>Fecha:</strong> {{ pago.fecha }} – 
-                    <strong>Aplicado:</strong> ${{ "{:,.2f}".format(pago.aplicado) }}
-                  </li>
+                    {% set mostrar_monto = pago.montoPago %}
+                    {% if pago.excedente > 0 %}
+                        {% if pagados_excedentes.get(pago.idPago) == pago.excedente %}
+                            {% set mostrar_monto = 0 %}
+                        {% else %}
+                            {% set pagados_excedentes = pagados_excedentes.update({pago.idPago: pago.excedente}) or pagados_excedentes %}
+                        {% endif %}
+                    {% endif %}
+                    <tr>
+                        <td>{{ cuota }}</td>
+                        <td>{{ pago.idPago }}</td>
+                        <td>{{ pago.fechaPago }}</td>
+                        <td>{{ "{:.2f}".format(mostrar_monto) }}</td>
+                        <td>{{ pago.fechaRegistro }}</td>
+                        <td>{{ "{:.2f}".format(pago.aplicado) }}</td>
+                        <td>
+                            {% if pago.excedente > 0 %}
+                                {{ "{:.2f}".format(pago.excedente) }}
+                            {% else %}
+                                0
+                            {% endif %}
+                        </td>
+                        <td>{{ pago.diasMora if pago.diasMora is not none else '' }}</td>
+                    </tr>
                 {% endfor %}
-              </ul>
-            </td>
-            <td>
-              <ul class="list-unstyled mb-0">
-                {% for pago in pagos %}
-                  <li><strong>Fecha:</strong> {{ pago.fechaRegistro }}</li>
-                {% endfor %}
-              </ul>
-            </td>
-
-           
-
-            <td>{{ pagos[0].montoPago_original }}</td>
-            <td>${{ "{:,.2f}".format(pagos | sum(attribute="aplicado")) }}</td>
-            <td>${{ "{:,.2f}".format(pagos | sum(attribute="excedente")) }}</td>
-            <td>
-              {% if (pagos | sum(attribute="aplicado")) >= datos.cuota %}
-                <span class="badge bg-success">Cubierta</span>
-              {% else %}
-                <span class="badge bg-warning text-dark">Pendiente</span>
-              {% endif %}
-            </td>
-
-            <td>
-              {{ pagos[0].dias_mora if pagos[0].dias_mora is not none else '-' }}
-            </td>
-          </tr>
-          {% endfor %}
+            {% endfor %}
         </tbody>
-      </table>
-    </div>
-
-    <!-- Notas de cargos -->
-    {% if datos.datosNotasCargos %}
-    <h5 class="section-title">Notas de Cargos</h5>
-    <div class="table-responsive">
-      <table class="table table-bordered table-striped text-center align-middle">
-        <thead class="table-dark">
-          <tr>
-            {% for key in datos.datosNotasCargos[0].keys() %}
-              <th>{{ key }}</th>
-            {% endfor %}
-          </tr>
-        </thead>
-        <tbody>
-          {% for nota in datos.datosNotasCargos %}
-          <tr>
-            {% for value in nota.values() %}
-              <td>{{ value }}</td>
-            {% endfor %}
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-    {% endif %}
-
-    <!-- Notas de crédito -->
-    {% if datos.datosNotasCreditos %}
-    <h5 class="section-title">Notas de Créditos</h5>
-    <div class="table-responsive">
-      <table class="table table-bordered table-striped text-center align-middle">
-        <thead class="table-dark">
-          <tr>
-            {% for key in datos.datosNotasCreditos[0].keys() %}
-              <th>{{ key }}</th>
-            {% endfor %}
-          </tr>
-        </thead>
-        <tbody>
-          {% for nota in datos.datosNotasCreditos %}
-          <tr>
-            {% for value in nota.values() %}
-              <td>{{ value }}</td>
-            {% endfor %}
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-    {% endif %}
+    </table>
 
     <div class="d-flex justify-content-end mt-4">
       <a href="/" class="btn btn-custom">Nueva Consulta</a>
