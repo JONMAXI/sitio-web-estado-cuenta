@@ -93,7 +93,9 @@ img.documento-imagen {
                 <form id="formConsulta" class="d-flex flex-column">
                     <div class="mb-3">
                         <label for="idDocumento" class="form-label">ID Crédito / Persona</label>
-                        <input type="text" class="form-control" id="idDocumento" required>
+                        <input type="text" class="form-control" id="idDocumento" required 
+       pattern="\d{1,10}" maxlength="10" title="Solo números, máximo 10 dígitos">
+
                     </div>
                     <div class="mb-3">
                         <label for="tipoDocumento" class="form-label">Tipo de Documento</label>

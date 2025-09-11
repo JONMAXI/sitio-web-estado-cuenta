@@ -308,7 +308,7 @@ def descargar(id):
             url = f"http://54.167.121.148:8081/s3/downloadS3File?fileName=VALIDACIONES/{id}_validaciones.pdf"
             r = requests.get(url)
             if r.status_code != 200:
-                return "Archivo Contrato no encontrado", 404
+                return "Cliente no encontrado en la Base de Datos", 404
             return Response(r.content, mimetype='application/pdf')
 
         else:
