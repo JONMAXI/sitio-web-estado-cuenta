@@ -12,10 +12,10 @@ app.secret_key = 'clave_super_secreta'
 
 # ------------------ CONFIGURACIÓN BASE DE DATOS ------------------
 db_config = {
-    'host': '34.9.147.5',
-    'user': 'jonathan',
-    'password': ')1>SbilQ,$VKr=hO',
-    'database': 'estado_cuenta'
+    'user': os.environ.get('DB_USER'),
+    'password': os.environ.get('DB_PASSWORD'),
+    'database': os.environ.get('DB_NAME'),
+    'unix_socket': f"/cloudsql/{os.environ.get('DB_CONNECTION_NAME')}"
 }
 
 # ------------------ CONFIGURACIÓN API EXTERNA ------------------

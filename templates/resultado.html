@@ -86,7 +86,7 @@
         <tbody>
           <tr>
             <td>{{ datos.idCredito }}</td>
-            <td>{{ datos.cuota }}</td>
+            <td>${{ datos.cuota }}</td>
             <td>${{ "{:,.2f}".format(datos.montoOtorgado) }}</td>
             <td>{{ datos.fechaInicio }}</td>
             <td>{{ datos.primerVencimiento }}</td>
@@ -124,9 +124,14 @@
           <td>{{ datos.datosSaldos.cuotasPagadas }}</td>
         </tr>
         <tr>
-          <th>Saldo Para LiquidarV2</th>
+          <th>Saldo Para Liquidar</th>
           <td>{{ datos.datosSaldos.saldoParaLiquidarV2 }}</td>
         </tr>
+ 	<tr>
+          <th>Saldo Total Vencido</th>
+          <td>{{ datos.datosSaldos.saldoTotalVencido }}</td>
+        </tr>
+
       </tbody>
     </table>
 
