@@ -1,304 +1,214 @@
-from flask import Flask, render_template, request, redirect, session, Response
-import mysql.connector
-import requests
-from datetime import datetime, timedelta
-import hashlib
-import os
-from io import BytesIO
-from PIL import Image
-import re
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Resultado Estado de Cuenta</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
 
-app = Flask(__name__)
-app.secret_key = 'clave_super_secreta'
+<style>
+    body { background-color: #f8f9fa; }
+    .logo { max-height: 60px; }
+    .header-bar { background-color: white; padding: 1rem 2rem; box-shadow: 0 0 10px rgba(0,0,0,0.05); }
+    .table-container { background: white; border-radius: 8px; padding: 2rem; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-top: 2rem; }
+    .btn-custom { background-color: #0d6efd; color: white; font-weight: 500; }
+    .btn-custom:hover { background-color: #084298; }
+    h5.section-title { margin-top: 2rem; color: #495057; }
+</style>
+</head>
+<body>
+<div class="header-bar d-flex justify-content-between align-items-center">
+  <div class="d-flex align-items-center">
+    <img src="https://maxikash.mx/cdn/shop/files/Logotipo-Maxikash-Outline.png?v=1749328460" alt="Logo" class="logo me-3">
+    <h5 class="mb-0 text-secondary">Resultado de Estado de Cuenta</h5>
+  </div>
+  {% if session.get('usuario') %}
+  <div class="text-end">
+    <small class="text-secondary">
+      <!-- Datos generales de inicio de sesión -->
+    </small>
+  </div>
+  {% endif %}
+</div>
 
-# ------------------ CONFIGURACIÓN BASE DE DATOS ------------------
-db_config = {
-    'user': os.environ.get('DB_USER'),
-    'password': os.environ.get('DB_PASSWORD'),
-    'database': os.environ.get('DB_NAME'),
-    'unix_socket': f"/cloudsql/{os.environ.get('DB_CONNECTION_NAME')}"
-}
+<div class="container">
+    {% if error %}
+        <div class="alert alert-danger">{{ error }}</div>
+    {% endif %}
 
-# ------------------ CONFIGURACIÓN API EXTERNA ------------------
-TOKEN = "3oJVoAHtwWn7oBT4o340gFkvq9uWRRmpFo7p"
-ENDPOINT = "https://servicios.s2movil.net/s2maxikash/estadocuenta"
+    <div class="table-container mt-3">
+        <div class="d-flex justify-content-end mt-4">
+            <a href="/" class="btn btn-custom">Nueva Consulta</a>
+        </div>
 
-# ------------------ UTILIDADES ------------------
-def _extraer_numero_cuota(concepto):
-    """Extrae el número de cuota desde el texto del concepto"""
-    if not concepto:
-        return None
-    m = re.search(r'CUOTA.*?(\d+)\s+DE', concepto, re.IGNORECASE)
-    if m:
-        return int(m.group(1))
-    m2 = re.search(r'(\d+)', concepto)
-    if m2:
-        return int(m2.group(1))
-    return None
+        <!-- Datos generales -->
+        <h5 class="section-title">Datos Generales</h5>
+        <div class="table-responsive">
+          <table class="table table-bordered table-striped text-center align-middle">
+            <thead class="table-dark">
+              <tr>
+                <th>ID Crédito</th>
+                <th>Cuota</th>
+                <th>Monto Otorgado</th>
+                <th>Fecha Inicio</th>
+                <th>Primer Vencimiento</th>
+                <th>Último Vencimiento</th>
+                <th>Status Crédito</th>
+                <th>Referencia STP</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>{{ datos.idCredito }}</td>
+                <td>${{ datos.cuota }}</td>
+                <td>${{ "{:,.2f}".format(datos.montoOtorgado) }}</td>
+                <td>{{ datos.fechaInicio }}</td>
+                <td>{{ datos.primerVencimiento }}</td>
+                <td>{{ datos.ultimoVencimiento }}</td>
+                <td>{{ datos.statusCredito }}</td>
+                <td>{{ datos.referenciaSTP }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
 
-def _parse_cuotas_field(value):
-    """Convierte '1,2' o 3 en lista de ints [1,2]"""
-    if value is None:
-        return []
-    if isinstance(value, (int, float)):
-        return [int(value)]
-    if isinstance(value, str):
-        parts = [p.strip() for p in value.split(',') if p.strip()]
-        out = []
-        for p in parts:
-            try:
-                out.append(int(p))
-            except:
-                pass
-        return out
-    return []
+        <!-- Datos del cliente -->
+        <h5 class="section-title">Datos del Cliente</h5>
+        <table class="table table-bordered table-striped text-center align-middle">
+          <tbody>
+            <tr>
+              <th>Nombre</th>
+              <td><i class="fa-solid fa-user me-2"></i> {{ datos.datosCliente.nombreCliente }}</td>
+            </tr>
+            <tr>
+              <th>Días Mora Máximo</th>
+              <td><strong>{{ datos.datosSaldos.diasMoraMaximo }} días de mora</strong></td>
+            </tr>
+            <tr>
+              <th>Cuotas Contratadas</th>
+              <td><strong>{{ datos.datosSaldos.cuotasContratadas }} cuotas</strong></td>
+            </tr>
+            <tr>
+              <th>Cuotas Pagadas</th>
+              <td><strong>{{ datos.datosSaldos.cuotasPagadas }} cuotas</strong></td>
+            </tr>
+            <tr>
+              <th>Saldo Para Liquidar</th>
+              <td><strong>${{ "{:,.2f}".format(datos.datosSaldos.saldoParaLiquidarV2) }}</strong> </td>
+            </tr>
+            <tr>
+              <th>Saldo Total Vencido</th>
+              <td><strong>${{ "{:,.2f}".format(datos.datosSaldos.saldoTotalVencido) }}</strong></td>
+            </tr>
+          </tbody>
+        </table>
 
-# ------------------ PROCESAR ESTADO DE CUENTA ------------------
-def procesar_estado_cuenta(estado_cuenta):
-    """
-    Devuelve una lista de cuotas con pagos aplicados correctamente,
-    manteniendo las fechas originales de cada cargo y distribuyendo excedentes.
-    """
-    cargos = estado_cuenta.get("datosCargos", []) or []
-    pagos = estado_cuenta.get("datosPagos", []) or []
+        <!-- Tabla de cuotas -->
+        <table class="table table-bordered table-striped">
+            <thead class="table-dark">
+                <tr>
+                    <th>Cuota</th>
+                    <th>Fecha</th>
+                    <th>Pago a Realizar</th>
+                    <th>Pagos Realizados por el cliente y Excedentes</th>
+                    <th>Total Aplicado</th>
+                    <th>Pendiente</th>
+                    <th>Días de Mora</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for fila in resultado %}
+                <tr>
+                    <td>{{ fila.cuota }}</td>
+                    <td class="fecha-cuota">{{ fila.fecha }}</td>
+                    <td>${{ '%.2f'|format(fila.monto_cargo) }}</td>
+                    <td>
+                        <table class="table table-sm table-bordered mb-0 pagos-table">
+                            <thead>
+                                <tr>
+                                    <th>Pago</th>
+                                    <th>Aplicado</th>
+                                    <th>Fecha de Pago</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for pago in fila.aplicados %}
+                                <tr>
+                                    <td>${{ '%.2f'|format(pago.montoPago) }}</td>
+                                    <td>${{ '%.2f'|format(pago.aplicado) }}</td>
+                                    <td class="fecha-pago">{{ pago.fechaRegistro }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </td>
+                    <td>${{ '%.2f'|format(fila.total_pagado) }}</td>
+                    <td>${{ '%.2f'|format(fila.pendiente) }}</td>
+                    <td class="dias-mora"></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
 
-    pagos_list = []
-    for p in pagos:
-        try:
-            monto_pago = float(p.get("montoPago", 0) or 0)
-        except:
-            monto_pago = 0.0
-        cuotas = _parse_cuotas_field(p.get("numeroCuotaSemanal"))
-        pagos_list.append({
-            "idPago": p.get("idPago"),
-            "remaining": monto_pago,
-            "cuotas": cuotas,
-            "fechaValor": p.get("fechaValor"),
-            "fechaRegistro": p.get("fechaRegistro"),
-            "montoPagoOriginal": monto_pago
-        })
+    </div>
+</div>
 
-    cargos_sorted = sorted(cargos, key=lambda c: int(c.get("idCargo", 0)))
+<!-- Botones de scroll -->
+<button id="scrollBottomBtn" class="btn btn-secondary rounded-circle"
+  style="position: fixed; bottom: 30px; right: 30px; width: 50px; height: 50px; z-index: 1000;">⬇️</button>
+<button id="scrollTopBtn" class="btn btn-secondary rounded-circle"
+  style="position: fixed; bottom: 90px; right: 30px; width: 50px; height: 50px; z-index: 1000;">⬆️</button>
 
-    pagos_por_cuota_index = {}
-    for pago in pagos_list:
-        for cnum in pago["cuotas"]:
-            pagos_por_cuota_index.setdefault(cnum, []).append(pago)
+<script>
+  // Scroll
+  document.getElementById("scrollBottomBtn").addEventListener("click", function () {
+    window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+  });
+  document.getElementById("scrollTopBtn").addEventListener("click", function () {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
 
-    tabla = []
+  // Calcular días de mora / anticipado
+  document.addEventListener("DOMContentLoaded", function() {
+      document.querySelectorAll("table.table-bordered.table-striped tbody tr").forEach(function(row) {
+          const fechaCuotaElem = row.querySelector(".fecha-cuota");
+          if (!fechaCuotaElem) return;
+          const fechaCuota = new Date(fechaCuotaElem.textContent);
 
-    for cargo in cargos_sorted:
-        concepto = cargo.get("concepto", "")
-        cuota_num = _extraer_numero_cuota(concepto)
-        if cuota_num is None:
-            cuota_num = int(cargo.get("idCargo", 0))
+          const pagos = row.querySelectorAll(".pagos-table .fecha-pago");
+          if (pagos.length === 0) return;
 
-        monto_cargo = float(cargo.get("monto", 0) or 0)
-        capital = float(cargo.get("capital", 0) or 0)
-        interes = float(cargo.get("interes", 0) or 0)
-        seguro_total = sum(float(cargo.get(k, 0) or 0) for k in ["seguroBienes","seguroVida","seguroDesempleo"])
-        fecha_venc = cargo.get("fechaVencimiento", "")
+          let ultimaFechaPago = null;
+          pagos.forEach(p => {
+              const f = new Date(p.textContent);
+              if (!ultimaFechaPago || f > ultimaFechaPago) ultimaFechaPago = f;
+          });
+          if (!ultimaFechaPago) return;
 
-        monto_restante_cargo = monto_cargo
-        aplicados = []
+          const diffMs = ultimaFechaPago - fechaCuota;
+          const diffDias = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
-        pagos_relacionados = pagos_por_cuota_index.get(cuota_num, [])
-        # Ordenar por fechaRegistro; si no existe, usar idPago
-        pagos_relacionados_sorted = sorted(
-            pagos_relacionados,
-            key=lambda p: datetime.strptime(p["fechaRegistro"], "%Y-%m-%d %H:%M:%S") 
-                          if p.get("fechaRegistro") 
-                          else (datetime.min + timedelta(seconds=int(p.get("idPago", 0))))
-        )
+          const diasMoraElem = row.querySelector(".dias-mora");
+          const badge = document.createElement("span");
+          badge.classList.add("badge");
+          badge.style.fontSize = "1rem";
+          badge.style.fontWeight = "500";
+          badge.style.padding = "0.5em";
 
-        for pago in pagos_relacionados_sorted:
-            if monto_restante_cargo <= 0 or pago["remaining"] <= 0:
-                continue
+          if (diffDias > 0) {
+              badge.textContent = diffDias + " días de mora";
+              badge.classList.add("bg-danger");
+          } else if (diffDias < 0) {
+              badge.textContent = "Pago anticipado " + Math.abs(diffDias) + " días";
+              badge.classList.add("bg-success");
+          } else {
+              badge.textContent = "Sin mora";
+              badge.classList.add("bg-secondary");
+          }
 
-            aplicar = min(pago["remaining"], monto_restante_cargo)
-
-            aplicados.append({
-                "idPago": pago["idPago"],
-                "montoPago": round(pago["remaining"], 2),
-                "aplicado": round(aplicar, 2),
-                "fechaRegistro": pago.get("fechaRegistro"),
-                "fechaPago": fecha_venc,  # Mantener fecha original del cargo
-                "diasMora": None
-            })
-
-            pago["remaining"] = round(pago["remaining"] - aplicar, 2)
-            monto_restante_cargo = round(monto_restante_cargo - aplicar, 2)
-
-        total_aplicado = round(monto_cargo - monto_restante_cargo, 2)
-        pendiente = round(max(monto_cargo - total_aplicado, 0.0), 2)
-        excedente = max(round(total_aplicado - monto_cargo, 2), 0.0)
-
-        tabla.append({
-            "cuota": cuota_num,
-            "fecha": fecha_venc,
-            "monto_cargo": round(monto_cargo, 2),
-            "capital": round(capital, 2),
-            "interes": round(interes, 2),
-            "seguro": round(seguro_total, 2),
-            "aplicados": aplicados,
-            "total_pagado": total_aplicado,
-            "pendiente": pendiente,
-            "excedente": excedente,
-            "raw_cargo": cargo
-        })
-
-    return sorted(tabla, key=lambda x: x["cuota"])
-
-# ------------------ LOGIN ------------------
-@app.route('/login', methods=['GET', 'POST'])
-def login():
-    if request.method == 'POST':
-        username = request.form['username']
-        password = hashlib.sha256(request.form['password'].encode()).hexdigest()
-        try:
-            conn = mysql.connector.connect(**db_config)
-            cur = conn.cursor(dictionary=True)
-            cur.execute("SELECT * FROM usuarios WHERE username = %s AND password = %s", (username, password))
-            user = cur.fetchone()
-            cur.close()
-            conn.close()
-        except mysql.connector.Error as err:
-            return f"Error de conexión a MySQL: {err}"
-
-        if user:
-            session['usuario'] = {
-                'username': user['username'],
-                'nombre_completo': user['nombre_completo'],
-                'puesto': user['puesto'],
-                'grupo': user['grupo']
-            }
-            return redirect('/')
-        else:
-            return render_template("login.html", error="Credenciales inválidas")
-    return render_template("login.html")
-
-@app.route('/logout')
-def logout():
-    session.pop('usuario', None)
-    return redirect('/login')
-
-# ------------------ CONSULTA ------------------
-@app.route('/', methods=['GET', 'POST'])
-def index():
-    if 'usuario' not in session:
-        return redirect('/login')
-
-    if request.method == 'POST':
-        id_credito = request.form['idCredito']
-        fecha_corte = request.form['fechaCorte'].strip()
-
-        try:
-            datetime.strptime(fecha_corte, "%Y-%m-%d")
-        except ValueError:
-            return render_template("index.html", error="Fecha inválida. Usa formato AAAA-MM-DD.", fecha_actual_iso=fecha_corte)
-
-        payload = {"idCredito": int(id_credito), "fechaCorte": fecha_corte}
-        headers = {"Token": TOKEN, "Content-Type": "application/json"}
-        res = requests.post(ENDPOINT, json=payload, headers=headers)
-
-        try:
-            data = res.json()
-        except Exception:
-            return render_template("resultado.html", error="Respuesta no válida del servidor", http=res.status_code)
-
-        if res.status_code == 200 and "estadoCuenta" in data:
-            estado_cuenta = data["estadoCuenta"]
-            tabla = procesar_estado_cuenta(estado_cuenta)
-            return render_template("resultado.html", datos=estado_cuenta, resultado=tabla)
-
-        else:
-            mensaje = data.get("mensaje", ["Error desconocido"])[0]
-            return render_template("resultado.html", error=mensaje, http=res.status_code)
-
-    fecha_actual_iso = datetime.now().strftime("%Y-%m-%d")
-    return render_template("index.html", fecha_actual_iso=fecha_actual_iso)
-
-
-# ------------------ DESCARGA / VISUALIZADOR ------------------
-@app.route('/descargar/<id>')
-def descargar(id):
-    if 'usuario' not in session:
-        return "No autorizado", 403
-
-    tipo = request.args.get('tipo', 'INE')
-
-    try:
-        if tipo == 'INE':
-            fecha_corte = datetime.now().strftime("%Y-%m-%d")
-            payload = {"idCredito": int(id), "fechaCorte": fecha_corte}
-            headers = {"Token": TOKEN, "Content-Type": "application/json"}
-            res = requests.post(ENDPOINT, json=payload, headers=headers)
-            data = res.json()
-
-            if res.status_code != 200 or "estadoCuenta" not in data:
-                return "Crédito no encontrado o sin datosCliente", 404
-
-            idCliente = data["estadoCuenta"].get("datosCliente", {}).get("idCliente")
-            if not idCliente:
-                return "No se encontró idCliente para este crédito", 404
-
-            url_frente = f"http://54.167.121.148:8081/s3/downloadS3File?fileName=INE/{idCliente}_frente.jpeg"
-            url_reverso = f"http://54.167.121.148:8081/s3/downloadS3File?fileName=INE/{idCliente}_reverso.jpeg"
-
-            r1 = requests.get(url_frente)
-            r2 = requests.get(url_reverso)
-
-            faltantes = []
-            if r1.status_code != 200: faltantes.append("Frente")
-            if r2.status_code != 200: faltantes.append("Reverso")
-            if faltantes:
-                return f"No se encontraron los archivos: {', '.join(faltantes)}", 404
-
-            img1 = Image.open(BytesIO(r1.content)).convert("RGB")
-            img2 = Image.open(BytesIO(r2.content)).convert("RGB")
-            img1.info['dpi'] = (150, 150)
-            img2.info['dpi'] = (150, 150)
-
-            pdf_bytes = BytesIO()
-            img1.save(pdf_bytes, format='PDF', save_all=True, append_images=[img2])
-            pdf_bytes.seek(0)
-
-            return Response(
-                pdf_bytes.read(),
-                mimetype='application/pdf',
-                headers={"Content-Disposition": f"inline; filename={id}_INE.pdf"}
-            )
-
-        elif tipo == 'Otro 1':
-            url = f"http://54.167.121.148:8081/s3/downloadS3File?fileName=CEP/{id}_cep.jpeg"
-            r = requests.get(url)
-            if r.status_code != 200:
-                return "Archivo CEP no encontrado", 404
-            return Response(r.content, mimetype='image/jpeg')
-
-        elif tipo == 'Contrato':
-            url = f"http://54.167.121.148:8081/s3/downloadS3File?fileName=VALIDACIONES/{id}_validaciones.pdf"
-            r = requests.get(url)
-            if r.status_code != 200:
-                return "Archivo Contrato no encontrado", 404
-            return Response(r.content, mimetype='application/pdf')
-
-        else:
-            return "Tipo de documento no válido", 400
-
-    except Exception as e:
-        return f"Error al procesar documento: {e}", 500
-
-# ------------------ PÁGINA DE CONSULTA DOCUMENTOS ------------------
-@app.route('/documentos', methods=['GET', 'POST'])
-def documentos():
-    if 'usuario' not in session:
-        return redirect('/login')
-    return render_template("consulta_documentos.html")
-
-
-# ------------------ INICIO ------------------
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8080))
-    app.run(host="0.0.0.0", port=port)
-
+          diasMoraElem.appendChild(badge);
+      });
+  });
+</script>
+</body>
+</html>
