@@ -73,13 +73,13 @@ def procesar_estado_cuenta(estado_cuenta):
         })
 
     cargos_sorted = sorted(cargos, key=lambda c: int(c.get("idCargo", 0)))
+
     pagos_por_cuota_index = {}
     for pago in pagos_list:
         for cnum in pago["cuotas"]:
             pagos_por_cuota_index.setdefault(cnum, []).append(pago)
 
     tabla = []
-
     for cargo in cargos_sorted:
         concepto = cargo.get("concepto", "")
         cuota_num = _extraer_numero_cuota(concepto)
@@ -98,17 +98,14 @@ def procesar_estado_cuenta(estado_cuenta):
         pagos_relacionados = pagos_por_cuota_index.get(cuota_num, [])
         pagos_relacionados_sorted = sorted(
             pagos_relacionados,
-            key=lambda p: datetime.strptime(p["fechaRegistro"], "%Y-%m-%d %H:%M:%S") 
-                          if p.get("fechaRegistro") 
-                          else (datetime.min + timedelta(seconds=int(p.get("idPago", 0))))
+            key=lambda p: datetime.strptime(p["fechaRegistro"], "%Y-%m-%d %H:%M:%S")
+            if p.get("fechaRegistro") else (datetime.min + timedelta(seconds=int(p.get("idPago", 0))))
         )
 
         for pago in pagos_relacionados_sorted:
             if monto_restante_cargo <= 0 or pago["remaining"] <= 0:
                 continue
-
             aplicar = min(pago["remaining"], monto_restante_cargo)
-
             aplicados.append({
                 "idPago": pago["idPago"],
                 "montoPago": round(pago["remaining"], 2),
@@ -117,7 +114,6 @@ def procesar_estado_cuenta(estado_cuenta):
                 "fechaPago": fecha_venc,
                 "diasMora": None
             })
-
             pago["remaining"] = round(pago["remaining"] - aplicar, 2)
             monto_restante_cargo = round(monto_restante_cargo - aplicar, 2)
 
@@ -142,84 +138,71 @@ def procesar_estado_cuenta(estado_cuenta):
     return sorted(tabla, key=lambda x: x["cuota"])
 
 # ------------------ LOGIN ------------------
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form['username']
+        password = hashlib.sha256(request.form['password'].encode()).hexdigest()
+        try:
+            conn = mysql.connector.connect(**db_config)
+            cur = conn.cursor(dictionary=True)
+            cur.execute(
+                "SELECT * FROM usuarios WHERE username = %s AND password = %s",
+                (username, password)
+            )
+            user = cur.fetchone()
+            cur.close()
+            conn.close()
+        except mysql.connector.Error as err:
+            return f"Error de conexión a MySQL: {err}"
+
+        if user:
+            session['usuario'] = {
+                'username': user['username'],
+                'nombre_completo': user['nombre_completo'],
+                'puesto': user['puesto'],
+                'grupo': user['grupo']
+            }
+            return redirect('/')
+        else:
+            return render_template("login.html", error="Credenciales inválidas")
+    return render_template("login.html")
+
+@app.route('/logout')
+def logout():
+    session.pop('usuario', None)
+    return redirect('/login')
+
+# ------------------ CONSULTA ------------------
 @app.route('/', methods=['GET', 'POST'])
 def index():
     if 'usuario' not in session:
         return redirect('/login')
 
     if request.method == 'POST':
-        id_credito = request.form['idCredito'].strip()
+        id_credito = request.form['idCredito']
         fecha_corte = request.form['fechaCorte'].strip()
-
-        # 1️⃣ Validar que id_credito sea numérico
-        if not id_credito.isdigit():
-            return render_template(
-                "index.html",
-                error="ID Crédito inválido. Debe ser un número entero.",
-                fecha_actual_iso=fecha_corte
-            )
-
-        # 2️⃣ Validar formato de fecha
         try:
             datetime.strptime(fecha_corte, "%Y-%m-%d")
         except ValueError:
-            return render_template(
-                "index.html",
-                error="Fecha inválida. Usa formato AAAA-MM-DD.",
-                fecha_actual_iso=fecha_corte
-            )
+            return render_template("index.html", error="Fecha inválida. Usa formato AAAA-MM-DD.", fecha_actual_iso=fecha_corte)
 
         payload = {"idCredito": int(id_credito), "fechaCorte": fecha_corte}
         headers = {"Token": TOKEN, "Content-Type": "application/json"}
-
-        # 3️⃣ Llamada a API
         try:
             res = requests.post(ENDPOINT, json=payload, headers=headers, timeout=15)
-            data = res.json() if res.ok else {}
+            data = res.json()
         except Exception:
-            return render_template("resultado.html", error="No se pudo conectar con el servidor externo")
+            return render_template("resultado.html", error="Respuesta no válida del servidor")
 
-        # 4️⃣ Validar status HTTP de la respuesta
-        if res.status_code != 200:
-            mensaje = data.get("mensaje", ["Error desconocido"]) if data else ["Error desconocido"]
-            return render_template("resultado.html", error=f"Error API HTTP {res.status_code}: {mensaje[0]}")
+        if res.status_code != 200 or "estadoCuenta" not in data:
+            mensaje = data.get("mensaje", ["Error desconocido"])[0] if data else "No se encontraron datos para este crédito"
+            return render_template("resultado.html", error=mensaje)
 
-        # 5️⃣ Validar campos internos de la API
-        http_code = data.get("http", 200)
-        tipo = data.get("tipo", "")
-        mensajes_api = data.get("mensaje", [])
-
-        if http_code != 200 or tipo == "ERROR_DATOS":
-            msg = mensajes_api[0] if mensajes_api else "Error desconocido de la API"
-            return render_template("resultado.html", error=f"Error API: {msg}")
-
-        # 6️⃣ Validar estadoCuenta
-        estado_cuenta = data.get("estadoCuenta")
-        if not estado_cuenta or estado_cuenta.get("idCredito") is None:
-            return render_template("resultado.html", error="El cliente no existe o no tiene datos disponibles")
-
-        # 7️⃣ Validar listas esenciales
-        datos_cliente = estado_cuenta.get("datosCliente") or []
-        datos_cargos = estado_cuenta.get("datosCargos") or []
-        datos_pagos = estado_cuenta.get("datosPagos") or []
-
-        if len(datos_cliente) == 0:
-            return render_template("resultado.html", error="No se encontraron datos del cliente")
-
-        # Nota: datosCargos y datosPagos pueden estar vacíos, pero no None
-        if datos_cargos is None: datos_cargos = []
-        if datos_pagos is None: datos_pagos = []
-
-        # 8️⃣ Validar datosSaldos
-        datos_saldos = estado_cuenta.get("datosSaldos") or {}
-        if not isinstance(datos_saldos, dict):
-            datos_saldos = {}
-
-        # 9️⃣ Procesar estado de cuenta con seguridad
+        estado_cuenta = data["estadoCuenta"]
         tabla = procesar_estado_cuenta(estado_cuenta)
         return render_template("resultado.html", datos=estado_cuenta, resultado=tabla)
 
-    # GET: mostrar formulario con fecha actual
     fecha_actual_iso = datetime.now().strftime("%Y-%m-%d")
     return render_template("index.html", fecha_actual_iso=fecha_actual_iso)
 
@@ -230,7 +213,6 @@ def descargar(id):
         return "No autorizado", 403
 
     tipo = request.args.get('tipo', 'INE')
-
     try:
         if tipo == 'INE':
             fecha_corte = datetime.now().strftime("%Y-%m-%d")
@@ -238,7 +220,6 @@ def descargar(id):
             headers = {"Token": TOKEN, "Content-Type": "application/json"}
             res = requests.post(ENDPOINT, json=payload, headers=headers)
             data = res.json() if res.ok else None
-
             if not data or "estadoCuenta" not in data:
                 return "Crédito no encontrado o sin datosCliente", 404
 
@@ -248,13 +229,14 @@ def descargar(id):
 
             url_frente = f"http://54.167.121.148:8081/s3/downloadS3File?fileName=INE/{idCliente}_frente.jpeg"
             url_reverso = f"http://54.167.121.148:8081/s3/downloadS3File?fileName=INE/{idCliente}_reverso.jpeg"
-
             r1 = requests.get(url_frente)
             r2 = requests.get(url_reverso)
 
             faltantes = []
-            if r1.status_code != 200: faltantes.append("Frente")
-            if r2.status_code != 200: faltantes.append("Reverso")
+            if r1.status_code != 200:
+                faltantes.append("Frente")
+            if r2.status_code != 200:
+                faltantes.append("Reverso")
             if faltantes:
                 return f"No se encontraron los archivos: {', '.join(faltantes)}", 404
 
@@ -266,8 +248,11 @@ def descargar(id):
             pdf_bytes = BytesIO()
             img1.save(pdf_bytes, format='PDF', save_all=True, append_images=[img2])
             pdf_bytes.seek(0)
-
-            return Response(pdf_bytes.read(), mimetype='application/pdf', headers={"Content-Disposition": f"inline; filename={id}_INE.pdf"})
+            return Response(
+                pdf_bytes.read(),
+                mimetype='application/pdf',
+                headers={"Content-Disposition": f"inline; filename={id}_INE.pdf"}
+            )
 
         elif tipo == 'Otro 1':
             url = f"http://54.167.121.148:8081/s3/downloadS3File?fileName=CEP/{id}_cep.jpeg"
@@ -286,8 +271,8 @@ def descargar(id):
         else:
             return "Tipo de documento no válido", 400
 
-    except Exception as e:
-        return f"Cliente no encontrado en la Base de Datos", 500
+    except Exception:
+        return "Cliente no encontrado en la Base de Datos", 500
 
 # ------------------ PÁGINA DE CONSULTA DOCUMENTOS ------------------
 @app.route('/documentos', methods=['GET', 'POST'])
