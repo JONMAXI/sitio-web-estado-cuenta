@@ -151,7 +151,7 @@ def index():
         id_credito = request.form['idCredito'].strip()
         fecha_corte = request.form['fechaCorte'].strip()
 
-        # Validar que id_credito sea numérico
+        # 1️⃣ Validar que id_credito sea numérico
         if not id_credito.isdigit():
             return render_template(
                 "index.html",
@@ -159,7 +159,7 @@ def index():
                 fecha_actual_iso=fecha_corte
             )
 
-        # Validar formato de fecha
+        # 2️⃣ Validar formato de fecha
         try:
             datetime.strptime(fecha_corte, "%Y-%m-%d")
         except ValueError:
@@ -172,47 +172,57 @@ def index():
         payload = {"idCredito": int(id_credito), "fechaCorte": fecha_corte}
         headers = {"Token": TOKEN, "Content-Type": "application/json"}
 
-        # Llamada a API
+        # 3️⃣ Llamada a API
         try:
             res = requests.post(ENDPOINT, json=payload, headers=headers, timeout=15)
-            data = res.json()
+            data = res.json() if res.ok else {}
         except Exception:
-            return render_template("resultado.html", error="Respuesta no válida del servidor")
+            return render_template("resultado.html", error="No se pudo conectar con el servidor externo")
 
-        # Manejar errores HTTP o mensajes de error de la API
+        # 4️⃣ Validar status HTTP de la respuesta
         if res.status_code != 200:
             mensaje = data.get("mensaje", ["Error desconocido"]) if data else ["Error desconocido"]
-            return render_template("resultado.html", error=f"Error API: {mensaje[0]}")
+            return render_template("resultado.html", error=f"Error API HTTP {res.status_code}: {mensaje[0]}")
 
-        if data.get("http") != 200 or data.get("tipo") == "ERROR_DATOS":
-            mensaje = data.get("mensaje", ["Error desconocido"])
-            return render_template("resultado.html", error=f"Error API: {mensaje[0]}")
+        # 5️⃣ Validar campos internos de la API
+        http_code = data.get("http", 200)
+        tipo = data.get("tipo", "")
+        mensajes_api = data.get("mensaje", [])
 
-        estado_cuenta = data.get("estadoCuenta") or {}
+        if http_code != 200 or tipo == "ERROR_DATOS":
+            msg = mensajes_api[0] if mensajes_api else "Error desconocido de la API"
+            return render_template("resultado.html", error=f"Error API: {msg}")
 
-        # ------------------ VALIDACIÓN COMPLETA CLIENTE ------------------
-        cliente_invalido = (
-            not estado_cuenta.get("idCredito") or
-            not estado_cuenta.get("datosCliente") or
-            len(estado_cuenta.get("datosCliente", [])) == 0 or
-            estado_cuenta.get("datosCargos") is None or
-            estado_cuenta.get("datosPagos") is None
-        )
+        # 6️⃣ Validar estadoCuenta
+        estado_cuenta = data.get("estadoCuenta")
+        if not estado_cuenta or estado_cuenta.get("idCredito") is None:
+            return render_template("resultado.html", error="El cliente no existe o no tiene datos disponibles")
 
-        if cliente_invalido:
-            return render_template(
-                "resultado.html",
-                error="El cliente no existe o no tiene datos disponibles"
-            )
-        # ------------------ FIN VALIDACIÓN ------------------
+        # 7️⃣ Validar listas esenciales
+        datos_cliente = estado_cuenta.get("datosCliente") or []
+        datos_cargos = estado_cuenta.get("datosCargos") or []
+        datos_pagos = estado_cuenta.get("datosPagos") or []
 
-        # Procesar estado de cuenta si es válido
+        if len(datos_cliente) == 0:
+            return render_template("resultado.html", error="No se encontraron datos del cliente")
+
+        # Nota: datosCargos y datosPagos pueden estar vacíos, pero no None
+        if datos_cargos is None: datos_cargos = []
+        if datos_pagos is None: datos_pagos = []
+
+        # 8️⃣ Validar datosSaldos
+        datos_saldos = estado_cuenta.get("datosSaldos") or {}
+        if not isinstance(datos_saldos, dict):
+            datos_saldos = {}
+
+        # 9️⃣ Procesar estado de cuenta con seguridad
         tabla = procesar_estado_cuenta(estado_cuenta)
         return render_template("resultado.html", datos=estado_cuenta, resultado=tabla)
 
     # GET: mostrar formulario con fecha actual
     fecha_actual_iso = datetime.now().strftime("%Y-%m-%d")
     return render_template("index.html", fecha_actual_iso=fecha_actual_iso)
+
 
 
 # ------------------ DESCARGA / VISUALIZADOR ------------------
