@@ -142,64 +142,46 @@ def procesar_estado_cuenta(estado_cuenta):
     return sorted(tabla, key=lambda x: x["cuota"])
 
 # ------------------ LOGIN ------------------
-@app.route('/', methods=['GET', 'POST'])
-def index():
+@app.route('/consultar', methods=['POST'])
+def consultar():
     if 'usuario' not in session:
-        return redirect('/login')
+        return jsonify({"error": "No autorizado"}), 403
 
-    if request.method == 'POST':
+    try:
+        id_credito = request.form.get("idCredito", "").strip()
+        fecha_corte = request.form.get("fechaCorte", "").strip()
+
+        if not id_credito.isdigit():
+            return jsonify({"mensaje": "ID Crédito inválido. Debe ser un número entero"}), 400
+
+        # Validar fecha
         try:
-            id_credito = request.form['idCredito'].strip()
-            fecha_corte = request.form['fechaCorte'].strip()
+            datetime.strptime(fecha_corte, "%Y-%m-%d")
+        except ValueError:
+            return jsonify({"mensaje": "Fecha inválida. Usa formato AAAA-MM-DD"}), 400
 
-            if not id_credito.isdigit():
-                raise ValueError("ID Crédito inválido. Debe ser un número entero.")
+        payload = {"idCredito": int(id_credito), "fechaCorte": fecha_corte}
+        headers = {"Token": TOKEN, "Content-Type": "application/json"}
+        res = requests.post(ENDPOINT, json=payload, headers=headers, timeout=15)
+        data = res.json() if res.ok else {}
 
-            try:
-                datetime.strptime(fecha_corte, "%Y-%m-%d")
-            except ValueError:
-                raise ValueError("Fecha inválida. Usa formato AAAA-MM-DD.")
+        # Manejo de errores API
+        if res.status_code != 200 or data.get("http") != 200:
+            mensaje = data.get("mensaje", ["Error desconocido"])
+            return jsonify({"mensaje": mensaje[0]}), 400
 
-            payload = {"idCredito": int(id_credito), "fechaCorte": fecha_corte}
-            headers = {"Token": TOKEN, "Content-Type": "application/json"}
+        estado_cuenta = data.get("estadoCuenta")
+        if not estado_cuenta or estado_cuenta.get("idCredito") is None:
+            return jsonify({"mensaje": "El cliente no existe o no tiene datos disponibles"}), 200
 
-            res = requests.post(ENDPOINT, json=payload, headers=headers, timeout=15)
-            data = res.json() if res.ok else {}
+        # Si existen datos
+        return jsonify({
+            "mensaje": "Cliente encontrado",
+            "estadoCuenta": estado_cuenta
+        })
 
-            if res.status_code != 200:
-                mensaje = data.get("mensaje", ["Error desconocido"]) if data else ["Error desconocido"]
-                raise ValueError(f"Error API HTTP {res.status_code}: {mensaje[0]}")
-
-            if data.get("http") != 200 or data.get("tipo") == "ERROR_DATOS":
-                mensajes_api = data.get("mensaje", ["Error desconocido"])
-                raise ValueError(f"Error API: {mensajes_api[0]}")
-
-            estado_cuenta = data.get("estadoCuenta")
-            if not estado_cuenta or estado_cuenta.get("idCredito") is None:
-                raise ValueError("El cliente no existe o no tiene datos disponibles")
-
-            # Validaciones adicionales
-            datos_cliente = estado_cuenta.get("datosCliente") or []
-            if len(datos_cliente) == 0:
-                raise ValueError("No se encontraron datos del cliente")
-
-            datos_cargos = estado_cuenta.get("datosCargos") or []
-            datos_pagos = estado_cuenta.get("datosPagos") or []
-
-            tabla = procesar_estado_cuenta(estado_cuenta)
-
-            return render_template("resultado.html", datos=estado_cuenta, resultado=tabla)
-
-        except ValueError as ve:
-            return render_template("index.html", error=str(ve), fecha_actual_iso=fecha_corte)
-        except Exception as e:
-            # Captura cualquier otro error inesperado
-            return render_template("resultado.html", error=f"Ocurrió un error inesperado: {str(e)}")
-
-    # GET
-    fecha_actual_iso = datetime.now().strftime("%Y-%m-%d")
-    return render_template("index.html", fecha_actual_iso=fecha_actual_iso)
-
+    except Exception as e:
+        return jsonify({"mensaje": f"Ocurrió un error inesperado: {str(e)}"}), 500
 
 # ------------------ DESCARGA / VISUALIZADOR ------------------
 @app.route('/descargar/<id>')

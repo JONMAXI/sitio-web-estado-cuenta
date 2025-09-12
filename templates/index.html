@@ -137,7 +137,7 @@ document.getElementById('formConsulta').addEventListener('submit', async functio
 
     } catch(err) {
         Swal.close();
-        Swal.fire({ icon:'error', title:'Error', text: err.message });
+        Swal.fire({ icon:'error', title:'Error', text: 'Cliente no encontrado en la Base de Datos' });
         document.getElementById('resultadoContainer').style.display = 'none';
     }
 });
