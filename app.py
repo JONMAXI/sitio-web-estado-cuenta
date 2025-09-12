@@ -155,7 +155,7 @@ def index():
         if not id_credito.isdigit():
             return render_template(
                 "index.html",
-                error="ID Crédito inválido",
+                error="ID Crédito inválido. Debe ser un número entero.",
                 fecha_actual_iso=fecha_corte
             )
 
@@ -179,10 +179,14 @@ def index():
         except Exception:
             return render_template("resultado.html", error="Respuesta no válida del servidor")
 
-        # Validar respuesta HTTP y presencia de 'estadoCuenta'
-        if res.status_code != 200 or "estadoCuenta" not in data:
-            mensaje = data.get("mensaje", ["Error desconocido"])[0] if data else "No se encontraron datos para este crédito"
-            return render_template("resultado.html", error=mensaje)
+        # Manejar errores HTTP o mensajes de error de la API
+        if res.status_code != 200:
+            mensaje = data.get("mensaje", ["Error desconocido"]) if data else ["Error desconocido"]
+            return render_template("resultado.html", error=f"Error API: {mensaje[0]}")
+
+        if data.get("http") != 200 or data.get("tipo") == "ERROR_DATOS":
+            mensaje = data.get("mensaje", ["Error desconocido"])
+            return render_template("resultado.html", error=f"Error API: {mensaje[0]}")
 
         estado_cuenta = data.get("estadoCuenta") or {}
 
@@ -209,6 +213,8 @@ def index():
     # GET: mostrar formulario con fecha actual
     fecha_actual_iso = datetime.now().strftime("%Y-%m-%d")
     return render_template("index.html", fecha_actual_iso=fecha_actual_iso)
+
+
 # ------------------ DESCARGA / VISUALIZADOR ------------------
 @app.route('/descargar/<id>')
 def descargar(id):
