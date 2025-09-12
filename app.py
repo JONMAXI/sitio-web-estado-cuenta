@@ -142,39 +142,6 @@ def procesar_estado_cuenta(estado_cuenta):
     return sorted(tabla, key=lambda x: x["cuota"])
 
 # ------------------ LOGIN ------------------
-@app.route('/login', methods=['GET', 'POST'])
-def login():
-    if request.method == 'POST':
-        username = request.form['username']
-        password = hashlib.sha256(request.form['password'].encode()).hexdigest()
-        try:
-            conn = mysql.connector.connect(**db_config)
-            cur = conn.cursor(dictionary=True)
-            cur.execute("SELECT * FROM usuarios WHERE username = %s AND password = %s", (username, password))
-            user = cur.fetchone()
-            cur.close()
-            conn.close()
-        except mysql.connector.Error as err:
-            return f"Error de conexión a MySQL: {err}"
-
-        if user:
-            session['usuario'] = {
-                'username': user['username'],
-                'nombre_completo': user['nombre_completo'],
-                'puesto': user['puesto'],
-                'grupo': user['grupo']
-            }
-            return redirect('/')
-        else:
-            return render_template("login.html", error="Credenciales inválidas")
-    return render_template("login.html")
-
-@app.route('/logout')
-def logout():
-    session.pop('usuario', None)
-    return redirect('/login')
-
-# ------------------ CONSULTA ------------------
 @app.route('/', methods=['GET', 'POST'])
 def index():
     if 'usuario' not in session:
@@ -183,31 +150,52 @@ def index():
     if request.method == 'POST':
         id_credito = request.form['idCredito']
         fecha_corte = request.form['fechaCorte'].strip()
+        
+        # Validar formato de fecha
         try:
             datetime.strptime(fecha_corte, "%Y-%m-%d")
         except ValueError:
-            return render_template("index.html", error="Fecha inválida. Usa formato AAAA-MM-DD.", fecha_actual_iso=fecha_corte)
+            return render_template(
+                "index.html",
+                error="Fecha inválida. Usa formato AAAA-MM-DD.",
+                fecha_actual_iso=fecha_corte
+            )
 
         payload = {"idCredito": int(id_credito), "fechaCorte": fecha_corte}
         headers = {"Token": TOKEN, "Content-Type": "application/json"}
 
+        # Llamada a API
         try:
             res = requests.post(ENDPOINT, json=payload, headers=headers, timeout=15)
             data = res.json()
         except Exception:
             return render_template("resultado.html", error="Respuesta no válida del servidor")
 
+        # Validar respuesta HTTP y presencia de 'estadoCuenta'
         if res.status_code != 200 or "estadoCuenta" not in data:
             mensaje = data.get("mensaje", ["Error desconocido"])[0] if data else "No se encontraron datos para este crédito"
             return render_template("resultado.html", error=mensaje)
 
         estado_cuenta = data["estadoCuenta"]
+
+        # ------------------ VALIDACIÓN CLIENTE ------------------
+        cliente_invalido = (
+            estado_cuenta.get("idCredito") is None or
+            estado_cuenta.get("datosCliente") is None or
+            len(estado_cuenta.get("datosCliente", [])) == 0
+        )
+
+        if cliente_invalido:
+            return render_template("resultado.html", error="El cliente no existe o no tiene datos disponibles")
+        # ------------------ FIN VALIDACIÓN ------------------
+
+        # Procesar estado de cuenta si es válido
         tabla = procesar_estado_cuenta(estado_cuenta)
         return render_template("resultado.html", datos=estado_cuenta, resultado=tabla)
 
+    # GET: mostrar formulario con fecha actual
     fecha_actual_iso = datetime.now().strftime("%Y-%m-%d")
     return render_template("index.html", fecha_actual_iso=fecha_actual_iso)
-
 # ------------------ DESCARGA / VISUALIZADOR ------------------
 @app.route('/descargar/<id>')
 def descargar(id):
