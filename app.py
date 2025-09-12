@@ -148,9 +148,17 @@ def index():
         return redirect('/login')
 
     if request.method == 'POST':
-        id_credito = request.form['idCredito']
+        id_credito = request.form['idCredito'].strip()
         fecha_corte = request.form['fechaCorte'].strip()
-        
+
+        # Validar que id_credito sea numérico
+        if not id_credito.isdigit():
+            return render_template(
+                "index.html",
+                error="ID Crédito inválido",
+                fecha_actual_iso=fecha_corte
+            )
+
         # Validar formato de fecha
         try:
             datetime.strptime(fecha_corte, "%Y-%m-%d")
@@ -176,17 +184,22 @@ def index():
             mensaje = data.get("mensaje", ["Error desconocido"])[0] if data else "No se encontraron datos para este crédito"
             return render_template("resultado.html", error=mensaje)
 
-        estado_cuenta = data["estadoCuenta"]
+        estado_cuenta = data.get("estadoCuenta") or {}
 
-        # ------------------ VALIDACIÓN CLIENTE ------------------
+        # ------------------ VALIDACIÓN COMPLETA CLIENTE ------------------
         cliente_invalido = (
-            estado_cuenta.get("idCredito") is None or
-            estado_cuenta.get("datosCliente") is None or
-            len(estado_cuenta.get("datosCliente", [])) == 0
+            not estado_cuenta.get("idCredito") or
+            not estado_cuenta.get("datosCliente") or
+            len(estado_cuenta.get("datosCliente", [])) == 0 or
+            estado_cuenta.get("datosCargos") is None or
+            estado_cuenta.get("datosPagos") is None
         )
 
         if cliente_invalido:
-            return render_template("resultado.html", error="El cliente no existe o no tiene datos disponibles")
+            return render_template(
+                "resultado.html",
+                error="El cliente no existe o no tiene datos disponibles"
+            )
         # ------------------ FIN VALIDACIÓN ------------------
 
         # Procesar estado de cuenta si es válido
