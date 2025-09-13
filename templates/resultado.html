@@ -36,7 +36,7 @@
   </div>
   {% if session.get('usuario') %}
   <div class="text-end">
-    <a href="/" class="btn btn-outline-primary logout-btn">Consulta Estado de Cuenta</a>
+    <a href="/documentos" class="btn btn-outline-primary logout-btn">Consulta Documentos</a>
     <a href="/logout" class="btn btn-outline-danger logout-btn">Cerrar sesión</a>
   </div>
   {% endif %}
@@ -115,8 +115,19 @@
               <th>Saldo Total Vencido</th>
               <td><strong>${{ "{:,.2f}".format(datos.datosSaldos.saldoTotalVencido) }}</strong></td>
             </tr>
+            <tr>
+              <th>Ultimo Pago</th>
+              <td><strong>${{ "{:,.2f}".format(datos.datosSaldos.saldoTotalVencido) }}</strong></td>
+            </tr>
+
           </tbody>
+
+	<br>
+
         </table>
+
+	<br>
+
 
         <!-- Tabla de cuotas -->
         <table class="table table-bordered table-striped">
