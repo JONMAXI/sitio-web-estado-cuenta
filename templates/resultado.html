@@ -84,6 +84,10 @@
       <td><strong>{{ datos.datosSaldos.diasMoraMaximo }} días de mora</strong></td>
     </tr>
     <tr>
+      <th>Días Mora</th>
+      <td><strong>${{ "{:,.2f}".format(datos.datosSaldos.diasMora) }}</strong></td>
+    </tr>
+    <tr>
       <th>Cuotas Contratadas</th>
       <td><strong>{{ datos.datosSaldos.cuotasContratadas }} cuotas</strong></td>
     </tr>
@@ -99,6 +103,8 @@
       <th>Saldo Total Vencido</th>
       <td><strong>${{ "{:,.2f}".format(datos.datosSaldos.saldoTotalVencido) }}</strong></td>
     </tr>
+
+
   </tbody>
 </table>
 
@@ -111,7 +117,6 @@
                     <th>Pago a Realizar</th>
                     <th>Pagos Realizados por el cliente y Excedentes</th>
                     <th>Total Aplicado</th>
-                    <th>Pendiente</th>
                     <th>Días de Mora</th>
                 </tr>
             </thead>
@@ -142,7 +147,6 @@
                         </table>
                     </td>
                     <td>${{ '%.2f'|format(fila.total_pagado) }}</td>
-                    <td>${{ '%.2f'|format(fila.pendiente) }}</td>
                     <td class="dias-mora"></td>
                 </tr>
                 {% endfor %}
