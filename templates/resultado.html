@@ -14,6 +14,33 @@
     .btn-custom { background-color: #0d6efd; color: white; font-weight: 500; }
     .btn-custom:hover { background-color: #084298; }
     h5.section-title { margin-top: 2rem; color: #495057; }
+
+
+#tabla-cuotas {
+        display: block;
+        max-height: 400px; /* Ajusta según necesites */
+        overflow-y: auto;
+    }
+    #tabla-cuotas thead {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+    }
+    #tabla-cuotas th {
+        background-color: #343a40; /* Igual que table-dark */
+        color: white;
+    }
+    /* Opcional: mantener ancho de columnas igual al hacer scroll */
+    #tabla-cuotas tbody tr {
+        display: table;
+        width: 100%;
+        table-layout: fixed;
+    }
+    #tabla-cuotas thead tr {
+        display: table;
+        width: 100%;
+        table-layout: fixed;
+    }
 </style>
 </head>
 <body>
@@ -109,7 +136,7 @@
 </table>
 
         <!-- Tabla de cuotas -->
-        <table class="table table-bordered table-striped">
+       <table id="tabla-cuotas" class="table table-bordered table-striped">
             <thead class="table-dark">
                 <tr>
                     <th>Cuota</th>
@@ -199,7 +226,7 @@
               badge.textContent = diffDias + " días de mora";
               badge.classList.add("bg-danger");
           } else if (diffDias < 0) {
-              badge.textContent = "Pago anticipado " + Math.abs(diffDias) + " días";
+              badge.textContent = "Anticipado " + Math.abs(diffDias) + " días";
               badge.classList.add("bg-success");
           } else {
               badge.textContent = "Sin mora";
