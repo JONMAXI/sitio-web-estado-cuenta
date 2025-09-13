@@ -214,16 +214,23 @@
 } else if (diffDias < 0) {
     const montoCuota = parseFloat(row.cells[2].textContent.replace(/[$,]/g, ''));
     const totalAplicado = parseFloat(row.cells[4].textContent.replace(/[$,]/g, ''));
-
-    if (totalAplicado > montoCuota) {
-        badge.textContent = "Pago anticipado con excedente";
-        badge.classList.add("bg-warning"); // Amarillo para excedente
-    } else if (totalAplicado < montoCuota) {
-        badge.textContent = "Pago anticipado incompleto";
-        badge.classList.add("bg-success"); // Verde
-    } else {
+    
+    if (totalAplicado >= montoCuota) {
         badge.textContent = "Pago anticipado";
-        badge.classList.add("bg-success"); // Verde
+        badge.classList.add("bg-success"); // verde
+    } else {
+        // Pago anticipado incompleto
+        const saldoPendiente = montoCuota - totalAplicado;
+        badge.textContent = "Pago anticipado incompleto ($" + saldoPendiente.toFixed(2) + " pendiente)";
+        badge.classList.add("bg-warning"); // amarillo
+        
+        // Si la fecha de hoy es después de la cuota, se puede mostrar mora adicional
+        const hoy = new Date();
+        if (hoy > fechaCuota) {
+            const diasMora = Math.floor((hoy - fechaCuota) / (1000 * 60 * 60 * 24));
+            badge.textContent += " - " + diasMora + " días de mora";
+            badge.classList.replace("bg-warning", "bg-danger"); // cambia a rojo
+        }
     }
 } else {
     badge.textContent = "Sin mora";
