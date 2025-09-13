@@ -119,51 +119,47 @@
               <th>Ultimo Pago</th>
               <td><strong>${{ "{:,.2f}".format(datos.datosSaldos.saldoTotalVencido) }}</strong></td>
             </tr>
-
           </tbody>
-
-	<br>
-
         </table>
 
-	<br>
-
-
-        <!-- Tabla de cuotas -->
-        <table class="table table-bordered table-striped">
-            <thead class="table-dark">
-                <tr>
-                    <th>Cuota</th>
-                    <th>Fecha</th>
-                    <th>Pago a Realizar</th>
-                    <th>Pagos Realizados por el cliente y Excedentes</th>
-                    <th>Total Aplicado</th>
-                    <th>Días de Mora</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for fila in resultado %}
-                <tr>
-                    <td>{{ fila.cuota }}</td>
-                    <td class="fecha-cuota">{{ fila.fecha }}</td>
-                    <td>${{ '%.2f'|format(fila.monto_cargo) }}</td>
-                    <td>
-                        <ul>
-                            {% for pago in fila.aplicados %}
-                                <li>
-                                    <span class="text-primary">Pago: ${{ '%.2f'|format(pago.montoPago) }}</span> -
-                                    <span class="text-success">Aplicado: ${{ '%.2f'|format(pago.aplicado) }}</span> -
-                                    <span class="text-muted fecha-pago">{{ pago.fechaRegistro }}</span>
-                                </li>
-                            {% endfor %}
-                        </ul>
-                    </td>
-                    <td>${{ '%.2f'|format(fila.total_pagado) }}</td>
-                    <td class="dias-mora"></td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+        <!-- Tabla de cuotas con cabecera fija -->
+        <h5 class="section-title">Pagos</h5>
+        <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+            <table class="table table-bordered table-striped">
+                <thead class="table-dark" style="position: sticky; top: 0; z-index: 10;">
+                    <tr>
+                        <th>Cuota</th>
+                        <th>Fecha</th>
+                        <th>Pago a Realizar</th>
+                        <th>Pagos Realizados por el cliente y Excedentes</th>
+                        <th>Total Aplicado</th>
+                        <th>Días de Mora</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for fila in resultado %}
+                    <tr>
+                        <td>{{ fila.cuota }}</td>
+                        <td class="fecha-cuota">{{ fila.fecha }}</td>
+                        <td>${{ '%.2f'|format(fila.monto_cargo) }}</td>
+                        <td>
+                            <ul>
+                                {% for pago in fila.aplicados %}
+                                    <li>
+                                        <span class="text-primary">Pago: ${{ '%.2f'|format(pago.montoPago) }}</span> -
+                                        <span class="text-success">Aplicado: ${{ '%.2f'|format(pago.aplicado) }}</span> -
+                                        <span class="text-muted fecha-pago">{{ pago.fechaRegistro }}</span>
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                        </td>
+                        <td>${{ '%.2f'|format(fila.total_pagado) }}</td>
+                        <td class="dias-mora"></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
 
     </div>
 
