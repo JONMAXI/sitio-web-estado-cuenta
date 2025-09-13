@@ -209,15 +209,26 @@
           badge.style.padding = "0.5em";
 
           if (diffDias > 0) {
-              badge.textContent = diffDias + " días de mora";
-              badge.classList.add("bg-danger");
-          } else if (diffDias < 0) {
-              badge.textContent = "Pago anticipado " + Math.abs(diffDias) + " días";
-              badge.classList.add("bg-success");
-          } else {
-              badge.textContent = "Sin mora";
-              badge.classList.add("bg-secondary");
-          }
+    badge.textContent = diffDias + " días de mora";
+    badge.classList.add("bg-danger");
+} else if (diffDias < 0) {
+    const montoCuota = parseFloat(row.cells[2].textContent.replace(/[$,]/g, ''));
+    const totalAplicado = parseFloat(row.cells[4].textContent.replace(/[$,]/g, ''));
+
+    if (totalAplicado > montoCuota) {
+        badge.textContent = "Pago anticipado con excedente";
+        badge.classList.add("bg-warning"); // Amarillo para excedente
+    } else if (totalAplicado < montoCuota) {
+        badge.textContent = "Pago anticipado incompleto";
+        badge.classList.add("bg-success"); // Verde
+    } else {
+        badge.textContent = "Pago anticipado";
+        badge.classList.add("bg-success"); // Verde
+    }
+} else {
+    badge.textContent = "Sin mora";
+    badge.classList.add("bg-secondary");
+}
 
           diasMoraElem.appendChild(badge);
       });
