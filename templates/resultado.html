@@ -85,7 +85,7 @@
     </tr>
     <tr>
       <th>Días Mora</th>
-      <td><strong>{{ datos.datosSaldos.diasMora) }}</strong></td>
+      <td><strong>${{ "{:,.2f}".format(datos.datosSaldos.diasMora) }}</strong></td>
     </tr>
     <tr>
       <th>Cuotas Contratadas</th>
@@ -117,6 +117,7 @@
                     <th>Pago a Realizar</th>
                     <th>Pagos Realizados por el cliente y Excedentes</th>
                     <th>Total Aplicado</th>
+
                     <th>Días de Mora</th>
                 </tr>
             </thead>
@@ -147,6 +148,7 @@
                         </table>
                     </td>
                     <td>${{ '%.2f'|format(fila.total_pagado) }}</td>
+
                     <td class="dias-mora"></td>
                 </tr>
                 {% endfor %}
