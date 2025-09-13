@@ -14,32 +14,17 @@
     .btn-custom { background-color: #0d6efd; color: white; font-weight: 500; }
     .btn-custom:hover { background-color: #084298; }
     h5.section-title { margin-top: 2rem; color: #495057; }
-
-
-#tabla-cuotas {
-        display: block;
-        max-height: 400px; /* Ajusta según necesites */
-        overflow-y: auto;
+    /* Pagos compactos dentro de la celda */
+    td ul { 
+        list-style: none; 
+        padding-left: 0; 
+        margin-bottom: 0; 
+        max-height: 100px; 
+        overflow-y: auto; 
     }
-    #tabla-cuotas thead {
-        position: sticky;
-        top: 0;
-        z-index: 10;
-    }
-    #tabla-cuotas th {
-        background-color: #343a40; /* Igual que table-dark */
-        color: white;
-    }
-    /* Opcional: mantener ancho de columnas igual al hacer scroll */
-    #tabla-cuotas tbody tr {
-        display: table;
-        width: 100%;
-        table-layout: fixed;
-    }
-    #tabla-cuotas thead tr {
-        display: table;
-        width: 100%;
-        table-layout: fixed;
+    td ul li {
+        font-size: 0.9rem;
+        margin-bottom: 0.2rem;
     }
 </style>
 </head>
@@ -98,45 +83,43 @@
           </table>
         </div>
 
-     <!-- Datos del cliente -->
-<h5 class="section-title">Datos del Cliente</h5>
-<table class="table table-bordered table-striped text-center align-middle">
-  <tbody>
-    <tr>
-      <th>Nombre</th>
-      <td><i class="fa-solid fa-user me-2"></i> {{ datos.datosCliente.nombreCliente }}</td>
-    </tr>
-    <tr>
-      <th>Días Mora Máximo</th>
-      <td><strong>{{ datos.datosSaldos.diasMoraMaximo }} días de mora</strong></td>
-    </tr>
-    <tr>
-      <th>Días Mora</th>
-      <td><strong>${{ "{:,.2f}".format(datos.datosSaldos.diasMora) }}</strong></td>
-    </tr>
-    <tr>
-      <th>Cuotas Contratadas</th>
-      <td><strong>{{ datos.datosSaldos.cuotasContratadas }} cuotas</strong></td>
-    </tr>
-    <tr>
-      <th>Cuotas Pagadas</th>
-      <td><strong>{{ datos.datosSaldos.cuotasPagadas }} cuotas</strong></td>
-    </tr>
-    <tr>
-      <th>Saldo Para Liquidar</th>
-      <td><strong>${{ "{:,.2f}".format(datos.datosSaldos.saldoParaLiquidarV2) }}</strong> </td>
-    </tr>
-    <tr>
-      <th>Saldo Total Vencido</th>
-      <td><strong>${{ "{:,.2f}".format(datos.datosSaldos.saldoTotalVencido) }}</strong></td>
-    </tr>
-
-
-  </tbody>
-</table>
+        <!-- Datos del cliente -->
+        <h5 class="section-title">Datos del Cliente</h5>
+        <table class="table table-bordered table-striped text-center align-middle">
+          <tbody>
+            <tr>
+              <th>Nombre</th>
+              <td><i class="fa-solid fa-user me-2"></i> {{ datos.datosCliente.nombreCliente }}</td>
+            </tr>
+            <tr>
+              <th>Días Mora Máximo</th>
+              <td><strong>{{ datos.datosSaldos.diasMoraMaximo }} días de mora</strong></td>
+            </tr>
+            <tr>
+              <th>Días Mora</th>
+              <td><strong>${{ "{:,.2f}".format(datos.datosSaldos.diasMora) }}</strong></td>
+            </tr>
+            <tr>
+              <th>Cuotas Contratadas</th>
+              <td><strong>{{ datos.datosSaldos.cuotasContratadas }} cuotas</strong></td>
+            </tr>
+            <tr>
+              <th>Cuotas Pagadas</th>
+              <td><strong>{{ datos.datosSaldos.cuotasPagadas }} cuotas</strong></td>
+            </tr>
+            <tr>
+              <th>Saldo Para Liquidar</th>
+              <td><strong>${{ "{:,.2f}".format(datos.datosSaldos.saldoParaLiquidarV2) }}</strong> </td>
+            </tr>
+            <tr>
+              <th>Saldo Total Vencido</th>
+              <td><strong>${{ "{:,.2f}".format(datos.datosSaldos.saldoTotalVencido) }}</strong></td>
+            </tr>
+          </tbody>
+        </table>
 
         <!-- Tabla de cuotas -->
-       <table id="tabla-cuotas" class="table table-bordered table-striped">
+        <table class="table table-bordered table-striped">
             <thead class="table-dark">
                 <tr>
                     <th>Cuota</th>
@@ -144,7 +127,6 @@
                     <th>Pago a Realizar</th>
                     <th>Pagos Realizados por el cliente y Excedentes</th>
                     <th>Total Aplicado</th>
-
                     <th>Días de Mora</th>
                 </tr>
             </thead>
@@ -155,20 +137,17 @@
                     <td class="fecha-cuota">{{ fila.fecha }}</td>
                     <td>${{ '%.2f'|format(fila.monto_cargo) }}</td>
                     <td>
-<div class="d-flex flex-column gap-2 pagos-table">
-    {% for pago in fila.aplicados %}
-    <div class="card shadow-sm border-0 p-2" style="background-color: #f1f3f5;">
-        <div class="d-flex justify-content-between align-items-center">
-            <div class="fw-semibold text-primary">Pago: ${{ '%.2f'|format(pago.montoPago) }}</div>
-            <div class="fw-semibold text-success">Aplicado: ${{ '%.2f'|format(pago.aplicado) }}</div>
-            <div class="text-muted fecha-pago"><i class="fa-solid fa-calendar-days me-1"></i>{{ pago.fechaRegistro }}</div>
-        </div>
-    </div>
-    {% endfor %}
-</div>
+                        <ul>
+                            {% for pago in fila.aplicados %}
+                                <li>
+                                    <span class="text-primary">Pago: ${{ '%.2f'|format(pago.montoPago) }}</span> -
+                                    <span class="text-success">Aplicado: ${{ '%.2f'|format(pago.aplicado) }}</span> -
+                                    <span class="text-muted fecha-pago">{{ pago.fechaRegistro }}</span>
+                                </li>
+                            {% endfor %}
+                        </ul>
                     </td>
                     <td>${{ '%.2f'|format(fila.total_pagado) }}</td>
-
                     <td class="dias-mora"></td>
                 </tr>
                 {% endfor %}
@@ -195,14 +174,14 @@
     window.scrollTo({ top: 0, behavior: 'smooth' });
   });
 
-  // Calcular días de mora / anticipado
+  // Calcular días de mora
   document.addEventListener("DOMContentLoaded", function() {
       document.querySelectorAll("table.table-bordered.table-striped tbody tr").forEach(function(row) {
           const fechaCuotaElem = row.querySelector(".fecha-cuota");
           if (!fechaCuotaElem) return;
           const fechaCuota = new Date(fechaCuotaElem.textContent);
 
-          const pagos = row.querySelectorAll(".pagos-table .fecha-pago");
+          const pagos = row.querySelectorAll(".fecha-pago");
           if (pagos.length === 0) return;
 
           let ultimaFechaPago = null;
@@ -226,7 +205,7 @@
               badge.textContent = diffDias + " días de mora";
               badge.classList.add("bg-danger");
           } else if (diffDias < 0) {
-              badge.textContent = "Anticipado " + Math.abs(diffDias) + " días";
+              badge.textContent = "Pago anticipado " + Math.abs(diffDias) + " días";
               badge.classList.add("bg-success");
           } else {
               badge.textContent = "Sin mora";
