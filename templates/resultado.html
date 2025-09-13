@@ -221,7 +221,7 @@
     } else {
         // Pago anticipado incompleto
         const saldoPendiente = montoCuota - totalAplicado;
-        badge.textContent = "Pago anticipado incompleto ($" + saldoPendiente.toFixed(2) + " pendiente)";
+        badge.textContent = "Incompleto <br> ($" + saldoPendiente.toFixed(2) + " pendiente)";
         badge.classList.add("bg-warning"); // amarillo
         
         // Si la fecha de hoy es después de la cuota, se puede mostrar mora adicional
