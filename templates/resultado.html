@@ -14,6 +14,23 @@
     .btn-custom { background-color: #0d6efd; color: white; font-weight: 500; }
     .btn-custom:hover { background-color: #084298; }
     h5.section-title { margin-top: 2rem; color: #495057; }
+
+/* Cabecera fija solo en la tabla de cuotas */
+  #tabla-cuotas thead th {
+    position: sticky;
+    top: 0;
+    background-color: #212529; /* mismo color de .table-dark */
+    color: white;
+    z-index: 2;
+  }
+
+  /* Scroll solo para la tabla de cuotas */
+  #tabla-cuotas-wrapper {
+    max-height: 400px; /* ajusta según necesites */
+    overflow-y: auto;
+  }
+
+
 </style>
 </head>
 <body>
@@ -109,49 +126,52 @@
 </table>
 
         <!-- Tabla de cuotas -->
-        <table class="table table-bordered table-striped">
-            <thead class="table-dark">
-                <tr>
-                    <th>Cuota</th>
-                    <th>Fecha</th>
-                    <th>Pago a Realizar</th>
-                    <th>Pagos Realizados por el cliente y Excedentes</th>
-                    <th>Total Aplicado</th>
-                    <th>Días de Mora</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for fila in resultado %}
-                <tr>
-                    <td>{{ fila.cuota }}</td>
-                    <td class="fecha-cuota">{{ fila.fecha }}</td>
-                    <td>${{ '%.2f'|format(fila.monto_cargo) }}</td>
-                    <td>
-                        <table class="table table-sm table-bordered mb-0 pagos-table">
-                            <thead>
-                                <tr>
-                                    <th>Pago</th>
-                                    <th>Aplicado</th>
-                                    <th>Fecha de Pago</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for pago in fila.aplicados %}
-                                <tr>
-                                    <td>${{ '%.2f'|format(pago.montoPago) }}</td>
-                                    <td>${{ '%.2f'|format(pago.aplicado) }}</td>
-                                    <td class="fecha-pago">{{ pago.fechaRegistro }}</td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </td>
-                    <td>${{ '%.2f'|format(fila.total_pagado) }}</td>
-                    <td class="dias-mora"></td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+<h5 class="section-title">Tabla de Cuotas</h5>
+<div id="tabla-cuotas-wrapper">
+  <table id="tabla-cuotas" class="table table-bordered table-striped">
+      <thead class="table-dark">
+          <tr>
+              <th>Cuota</th>
+              <th>Fecha</th>
+              <th>Pago a Realizar</th>
+              <th>Pagos Realizados por el cliente y Excedentes</th>
+              <th>Total Aplicado</th>
+              <th>Días de Mora</th>
+          </tr>
+      </thead>
+      <tbody>
+          {% for fila in resultado %}
+          <tr>
+              <td>{{ fila.cuota }}</td>
+              <td class="fecha-cuota">{{ fila.fecha }}</td>
+              <td>${{ '%.2f'|format(fila.monto_cargo) }}</td>
+              <td>
+                  <table class="table table-sm table-bordered mb-0 pagos-table">
+                      <thead>
+                          <tr>
+                              <th>Pago</th>
+                              <th>Aplicado</th>
+                              <th>Fecha de Pago</th>
+                          </tr>
+                      </thead>
+                      <tbody>
+                          {% for pago in fila.aplicados %}
+                          <tr>
+                              <td>${{ '%.2f'|format(pago.montoPago) }}</td>
+                              <td>${{ '%.2f'|format(pago.aplicado) }}</td>
+                              <td class="fecha-pago">{{ pago.fechaRegistro }}</td>
+                          </tr>
+                          {% endfor %}
+                      </tbody>
+                  </table>
+              </td>
+              <td>${{ '%.2f'|format(fila.total_pagado) }}</td>
+              <td class="dias-mora"></td>
+          </tr>
+          {% endfor %}
+      </tbody>
+  </table>
+</div>
 
     </div>
 
