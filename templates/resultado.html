@@ -128,24 +128,18 @@
                     <td class="fecha-cuota">{{ fila.fecha }}</td>
                     <td>${{ '%.2f'|format(fila.monto_cargo) }}</td>
                     <td>
-                        <table class="table table-sm table-bordered mb-0 pagos-table">
-                            <thead>
-                                <tr>
-                                    <th>Pago</th>
-                                    <th>Aplicado</th>
-                                    <th>Fecha de Pago</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for pago in fila.aplicados %}
-                                <tr>
-                                    <td>${{ '%.2f'|format(pago.montoPago) }}</td>
-                                    <td>${{ '%.2f'|format(pago.aplicado) }}</td>
-                                    <td class="fecha-pago">{{ pago.fechaRegistro }}</td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
+                                               <!-- Nueva tabla de pagos dentro de cada cuota -->
+<div class="d-flex flex-column gap-2 pagos-table">
+    {% for pago in fila.aplicados %}
+    <div class="card shadow-sm border-0 p-2" style="background-color: #f1f3f5;">
+        <div class="d-flex justify-content-between align-items-center">
+            <div class="fw-semibold text-primary">Pago: ${{ '%.2f'|format(pago.montoPago) }}</div>
+            <div class="fw-semibold text-success">Aplicado: ${{ '%.2f'|format(pago.aplicado) }}</div>
+            <div class="text-muted"><i class="fa-solid fa-calendar-days me-1"></i>{{ pago.fechaRegistro }}</div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
                     </td>
                     <td>${{ '%.2f'|format(fila.total_pagado) }}</td>
 
