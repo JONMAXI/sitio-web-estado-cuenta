@@ -196,7 +196,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
         pagos.forEach(p => {
             const f = new Date(p.textContent);
-            const montoPago = parseFloat(p.previousElementSibling.textContent.replace(/[^0-9.-]+/g,""));
+            const montoPago = parseFloat(p.textContent.replace(/[^0-9.-]+/g,"")); // <-- pago real
             if (!ultimaFechaPago || f > ultimaFechaPago) {
                 ultimaFechaPago = f;
                 montoUltimoPago = montoPago;
@@ -230,7 +230,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 const hoy = new Date();
                 if (hoy > fechaCuota) {
                     const diasMora = Math.floor((hoy - fechaCuota) / (1000 * 60 * 60 * 24));
-                    badge.innerHTML += " - " + diasMora + " días de mora";
+                    badge.innerHTML += "<br> " + diasMora + " días de mora";
                     badge.classList.replace("bg-warning", "bg-danger");
                 }
             }
@@ -241,7 +241,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
         diasMoraElem.appendChild(badge);
 
-        // Último pago completo
+        // Último pago completo (monto real)
         if (totalAplicado >= montoCuota) {
             if (!ultimoPagoCompleto || ultimaFechaPago > ultimoPagoCompleto.fecha) {
                 ultimoPagoCompleto = {
