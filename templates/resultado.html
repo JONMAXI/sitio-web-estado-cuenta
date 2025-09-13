@@ -24,9 +24,8 @@
   </div>
   {% if session.get('usuario') %}
   <div class="text-end">
-    <small class="text-secondary">
-      <!-- Datos generales DE INICIO DE SESION -->
-    </small>
+    <a href="/" class="btn btn-outline-primary logout-btn">Consulta Estado de Cuenta</a>
+    <a href="/logout" class="btn btn-outline-danger logout-btn">Cerrar sesión</a>
   </div>
   {% endif %}
 </div>
