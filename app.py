@@ -52,91 +52,117 @@ def _parse_cuotas_field(value):
     return []
 
 # ------------------ PROCESAR ESTADO DE CUENTA ------------------
+def safe_float(value, default=0.0):
+    try:
+        return float(value)
+    except (ValueError, TypeError):
+        return default
+
+def safe_int(value, default=0):
+    try:
+        return int(value)
+    except (ValueError, TypeError):
+        return default
+
+def safe_date(date_str, fmt="%Y-%m-%d %H:%M:%S"):
+    try:
+        return datetime.strptime(date_str, fmt)
+    except (ValueError, TypeError):
+        return None
+
 def procesar_estado_cuenta(estado_cuenta):
-    cargos = estado_cuenta.get("datosCargos", []) or []
-    pagos = estado_cuenta.get("datosPagos", []) or []
+    try:
+        # Asegurar listas válidas
+        cargos = estado_cuenta.get("datosCargos") or []
+        if not isinstance(cargos, list):
+            cargos = []
+        pagos = estado_cuenta.get("datosPagos") or []
+        if not isinstance(pagos, list):
+            pagos = []
 
-    pagos_list = []
-    for p in pagos:
-        try:
-            monto_pago = float(p.get("montoPago", 0) or 0)
-        except:
-            monto_pago = 0.0
-        cuotas = _parse_cuotas_field(p.get("numeroCuotaSemanal"))
-        pagos_list.append({
-            "idPago": p.get("idPago"),
-            "remaining": monto_pago,
-            "cuotas": cuotas,
-            "fechaValor": p.get("fechaValor"),
-            "fechaRegistro": p.get("fechaRegistro"),
-            "montoPagoOriginal": monto_pago
-        })
-
-    cargos_sorted = sorted(cargos, key=lambda c: int(c.get("idCargo", 0)))
-
-    pagos_por_cuota_index = {}
-    for pago in pagos_list:
-        for cnum in pago["cuotas"]:
-            pagos_por_cuota_index.setdefault(cnum, []).append(pago)
-
-    tabla = []
-    for cargo in cargos_sorted:
-        concepto = cargo.get("concepto", "")
-        cuota_num = _extraer_numero_cuota(concepto)
-        if cuota_num is None:
-            cuota_num = int(cargo.get("idCargo", 0))
-
-        monto_cargo = float(cargo.get("monto", 0) or 0)
-        capital = float(cargo.get("capital", 0) or 0)
-        interes = float(cargo.get("interes", 0) or 0)
-        seguro_total = sum(float(cargo.get(k, 0) or 0) for k in ["seguroBienes","seguroVida","seguroDesempleo"])
-        fecha_venc = cargo.get("fechaVencimiento", "")
-
-        monto_restante_cargo = monto_cargo
-        aplicados = []
-
-        pagos_relacionados = pagos_por_cuota_index.get(cuota_num, [])
-        pagos_relacionados_sorted = sorted(
-            pagos_relacionados,
-            key=lambda p: datetime.strptime(p["fechaRegistro"], "%Y-%m-%d %H:%M:%S")
-            if p.get("fechaRegistro") else (datetime.min + timedelta(seconds=int(p.get("idPago", 0))))
-        )
-
-        for pago in pagos_relacionados_sorted:
-            if monto_restante_cargo <= 0 or pago["remaining"] <= 0:
-                continue
-            aplicar = min(pago["remaining"], monto_restante_cargo)
-            aplicados.append({
-                "idPago": pago["idPago"],
-                "montoPago": round(pago["remaining"], 2),
-                "aplicado": round(aplicar, 2),
-                "fechaRegistro": pago.get("fechaRegistro"),
-                "fechaPago": fecha_venc,
-                "diasMora": None
+        # Procesar pagos
+        pagos_list = []
+        for p in pagos:
+            monto_pago = safe_float(p.get("montoPago"), 0.0)
+            cuotas = _parse_cuotas_field(p.get("numeroCuotaSemanal"))
+            pagos_list.append({
+                "idPago": p.get("idPago"),
+                "remaining": monto_pago,
+                "cuotas": cuotas,
+                "fechaValor": p.get("fechaValor"),
+                "fechaRegistro": p.get("fechaRegistro"),
+                "montoPagoOriginal": monto_pago
             })
-            pago["remaining"] = round(pago["remaining"] - aplicar, 2)
-            monto_restante_cargo = round(monto_restante_cargo - aplicar, 2)
 
-        total_aplicado = round(monto_cargo - monto_restante_cargo, 2)
-        pendiente = round(max(monto_cargo - total_aplicado, 0.0), 2)
-        excedente = max(round(total_aplicado - monto_cargo, 2), 0.0)
+        # Ordenar cargos por idCargo (seguro)
+        cargos_sorted = sorted(cargos, key=lambda c: safe_int(c.get("idCargo"), 0))
 
-        tabla.append({
-            "cuota": cuota_num,
-            "fecha": fecha_venc,
-            "monto_cargo": round(monto_cargo, 2),
-            "capital": round(capital, 2),
-            "interes": round(interes, 2),
-            "seguro": round(seguro_total, 2),
-            "aplicados": aplicados,
-            "total_pagado": total_aplicado,
-            "pendiente": pendiente,
-            "excedente": excedente,
-            "raw_cargo": cargo
-        })
+        # Indexar pagos por cuota
+        pagos_por_cuota_index = {}
+        for pago in pagos_list:
+            for cnum in pago["cuotas"]:
+                pagos_por_cuota_index.setdefault(cnum, []).append(pago)
 
-    return sorted(tabla, key=lambda x: x["cuota"])
+        tabla = []
+        for cargo in cargos_sorted:
+            concepto = cargo.get("concepto", "")
+            cuota_num = _extraer_numero_cuota(concepto)
+            if cuota_num is None:
+                cuota_num = safe_int(cargo.get("idCargo"))
 
+            monto_cargo = safe_float(cargo.get("monto"))
+            capital = safe_float(cargo.get("capital"))
+            interes = safe_float(cargo.get("interes"))
+            seguro_total = sum(safe_float(cargo.get(k)) for k in ["seguroBienes","seguroVida","seguroDesempleo"])
+            fecha_venc = cargo.get("fechaVencimiento")
+
+            monto_restante_cargo = monto_cargo
+            aplicados = []
+
+            pagos_relacionados = pagos_por_cuota_index.get(cuota_num, [])
+            pagos_relacionados_sorted = sorted(
+                pagos_relacionados,
+                key=lambda p: safe_date(p.get("fechaRegistro")) or datetime.min
+            )
+
+            for pago in pagos_relacionados_sorted:
+                if monto_restante_cargo <= 0 or pago["remaining"] <= 0:
+                    continue
+                aplicar = min(pago["remaining"], monto_restante_cargo)
+                aplicados.append({
+                    "idPago": pago.get("idPago"),
+                    "montoPago": round(pago["remaining"], 2),
+                    "aplicado": round(aplicar, 2),
+                    "fechaRegistro": pago.get("fechaRegistro"),
+                    "fechaPago": fecha_venc,
+                    "diasMora": None
+                })
+                pago["remaining"] = max(round(pago["remaining"] - aplicar, 2), 0)
+                monto_restante_cargo = max(round(monto_restante_cargo - aplicar, 2), 0)
+
+            total_aplicado = round(monto_cargo - monto_restante_cargo, 2)
+            pendiente = round(max(monto_cargo - total_aplicado, 0.0), 2)
+            excedente = max(round(total_aplicado - monto_cargo, 2), 0.0)
+
+            tabla.append({
+                "cuota": cuota_num,
+                "fecha": fecha_venc,
+                "monto_cargo": round(monto_cargo, 2),
+                "capital": round(capital, 2),
+                "interes": round(interes, 2),
+                "seguro": round(seguro_total, 2),
+                "aplicados": aplicados,
+                "total_pagado": total_aplicado,
+                "pendiente": pendiente,
+                "excedente": excedente,
+                "raw_cargo": cargo
+            })
+
+        return sorted(tabla, key=lambda x: safe_int(x["cuota"]))
+
+    except Exception as e:
+        print(f"[ERROR] procesar_estado_cuenta: {e}")
+        return []
 # ------------------ LOGIN ------------------
 @app.route('/login', methods=['GET', 'POST'])
 def login():
