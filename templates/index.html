@@ -79,8 +79,8 @@
             <form method="post">
                 <div class="mb-3">
                     <label for="idCredito" class="form-label">ID Crédito</label>
-                    <input type="text" class="form-control" id="idCredito" name="idCredito" 
-       min="0" max="9999999999" required>
+                    <input type="number" class="form-control" id="idCredito" name="idCredito" 
+       min="0" max="999999999" required oninput="this.value = this.value.replace(/[^0-9]/g, '')">
 
                 </div>
                 <div class="mb-3" style="display: none;">
