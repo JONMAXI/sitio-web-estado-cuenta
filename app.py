@@ -7,7 +7,6 @@ import os
 from io import BytesIO
 from PIL import Image
 import re
-from google.cloud import storage
 
 app = Flask(__name__)
 app.secret_key = 'clave_super_secreta'
@@ -19,12 +18,6 @@ db_config = {
     'database': os.environ.get('DB_NAME'),
     'unix_socket': f"/cloudsql/{os.environ.get('DB_CONNECTION_NAME')}"
 }
-
-# ------------------ CONFIGURACIÓN GOOGLE CLOUD STORAGE ------------------
-GCS_BUCKET = "bucket_documentos"
-gcs_client = storage.Client()  # Se crea una sola vez al iniciar la app
-bucket = gcs_client.bucket(GCS_BUCKET)  # Bucket global
-
 
 # ------------------ CONFIGURACIÓN API EXTERNA ------------------
 TOKEN = "3oJVoAHtwWn7oBT4o340gFkvq9uWRRmpFo7p"
