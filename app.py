@@ -278,90 +278,89 @@ def documentos():
         return redirect('/login')
     return render_template("consulta_documentos.html")
 
-# ------------------ DESCARGA / VISUALIZADOR ------------------
+# ------------------ DESCARGA / VISUALIZADOR CON AUDITORÍA ------------------
 @app.route('/descargar/<id>')
 def descargar(id):
     if 'usuario' not in session:
         return "No autorizado", 403
+
     tipo = request.args.get('tipo', 'INE')
     usuario = session['usuario']['username']
 
     try:
-        if tipo == 'INE':
-            bucket_path = f"INE/{id}_INE.pdf"
-        elif tipo == 'Otro 1':
-            bucket_path = f"CEP/{id}_cep.jpeg"
-        elif tipo == 'Contrato':
-            bucket_path = f"VALIDACIONES/{id}_validaciones.pdf"
-        else:
-            auditar_documento(usuario, tipo, tipo, id, 0, "Tipo no válido")
-            return "Tipo de documento no válido", 400
-
-        blob = bucket.blob(bucket_path)
-        if blob.exists():
-            content = blob.download_as_bytes()
-            mimetype = "application/pdf" if bucket_path.endswith(".pdf") else "image/jpeg"
-            auditar_documento(usuario, tipo, bucket_path, id, 1)
-            return Response(content, mimetype=mimetype)
-
-        # Descarga original si no está en bucket
         if tipo == 'INE':
             fecha_corte = datetime.now().strftime("%Y-%m-%d")
             payload = {"idCredito": int(id), "fechaCorte": fecha_corte}
             headers = {"Token": TOKEN, "Content-Type": "application/json"}
             res = requests.post(ENDPOINT, json=payload, headers=headers)
             data = res.json() if res.ok else None
+
             if not data or "estadoCuenta" not in data:
-                auditar_documento(usuario, tipo, bucket_path, id, 0, "Crédito no encontrado")
-                return "Crédito no encontrado", 404
+                auditar_documento(usuario, "INE", "INE completo", id, 0, "Crédito no encontrado o sin datosCliente")
+                return "Crédito no encontrado o sin datosCliente", 404
 
             idCliente = data["estadoCuenta"].get("datosCliente", {}).get("idCliente")
             if not idCliente:
-                auditar_documento(usuario, tipo, bucket_path, id, 0, "No idCliente")
-                return "No se encontró idCliente", 404
+                auditar_documento(usuario, "INE", "INE completo", id, 0, "No se encontró idCliente")
+                return "No se encontró idCliente para este crédito", 404
 
             url_frente = f"http://54.167.121.148:8081/s3/downloadS3File?fileName=INE/{idCliente}_frente.jpeg"
             url_reverso = f"http://54.167.121.148:8081/s3/downloadS3File?fileName=INE/{idCliente}_reverso.jpeg"
             r1 = requests.get(url_frente)
             r2 = requests.get(url_reverso)
 
-            if r1.status_code != 200 or r2.status_code != 200:
-                auditar_documento(usuario, tipo, bucket_path, id, 0, "Frente o reverso no encontrado")
-                return "No se encontraron archivos", 404
+            faltantes = []
+            if r1.status_code != 200:
+                faltantes.append("Frente")
+            if r2.status_code != 200:
+                faltantes.append("Reverso")
+            if faltantes:
+                auditar_documento(usuario, "INE", "INE completo", id, 0, f"No se encontraron los archivos: {', '.join(faltantes)}")
+                return f"No se encontraron los archivos: {', '.join(faltantes)}", 404
 
+            # ✅ Descarga exitosa
             img1 = Image.open(BytesIO(r1.content)).convert("RGB")
             img2 = Image.open(BytesIO(r2.content)).convert("RGB")
+            img1.info['dpi'] = (150, 150)
+            img2.info['dpi'] = (150, 150)
             pdf_bytes = BytesIO()
             img1.save(pdf_bytes, format='PDF', save_all=True, append_images=[img2])
             pdf_bytes.seek(0)
-            blob.upload_from_file(pdf_bytes, content_type="application/pdf")
-            pdf_bytes.seek(0)
-            auditar_documento(usuario, tipo, bucket_path, id, 1)
-            return Response(pdf_bytes.read(), mimetype='application/pdf')
+
+            auditar_documento(usuario, "INE", "INE completo", id, 1, None)
+            return Response(
+                pdf_bytes.read(),
+                mimetype='application/pdf',
+                headers={"Content-Disposition": f"inline; filename={id}_INE.pdf"}
+            )
 
         elif tipo == 'Otro 1':
             url = f"http://54.167.121.148:8081/s3/downloadS3File?fileName=CEP/{id}_cep.jpeg"
             r = requests.get(url)
             if r.status_code != 200:
-                auditar_documento(usuario, tipo, bucket_path, id, 0, "CEP no encontrado")
+                auditar_documento(usuario, "CEP", "CEP completo", id, 0, "Archivo CEP no encontrado")
                 return "Archivo CEP no encontrado", 404
-            blob.upload_from_string(r.content, content_type="image/jpeg")
-            auditar_documento(usuario, tipo, bucket_path, id, 1)
+
+            auditar_documento(usuario, "CEP", "CEP completo", id, 1, None)
             return Response(r.content, mimetype='image/jpeg')
 
         elif tipo == 'Contrato':
             url = f"http://54.167.121.148:8081/s3/downloadS3File?fileName=VALIDACIONES/{id}_validaciones.pdf"
             r = requests.get(url)
             if r.status_code != 200:
-                auditar_documento(usuario, tipo, bucket_path, id, 0, "Contrato no encontrado")
-                return "Contrato no encontrado", 404
-            blob.upload_from_string(r.content, content_type="application/pdf")
-            auditar_documento(usuario, tipo, bucket_path, id, 1)
+                auditar_documento(usuario, "Contrato", "Contrato validaciones", id, 0, "Cliente no encontrado en la Base de Datos")
+                return "Cliente no encontrado en la Base de Datos", 404
+
+            auditar_documento(usuario, "Contrato", "Contrato validaciones", id, 1, None)
             return Response(r.content, mimetype='application/pdf')
 
+        else:
+            auditar_documento(usuario, tipo, tipo, id, 0, "Tipo de documento no válido")
+            return "Tipo de documento no válido", 400
+
     except Exception as e:
-        auditar_documento(usuario, tipo, bucket_path, id, 0, str(e))
-        return f"Error interno: {e}", 500
+        auditar_documento(usuario, tipo, tipo, id, 0, f"Error interno: {e}")
+        return "Cliente no encontrado en la Base de Datos", 500
 
 # ------------------ INICIO ------------------
 if __name__ == "__main__":
