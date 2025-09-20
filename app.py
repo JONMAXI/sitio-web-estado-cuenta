@@ -271,13 +271,22 @@ def index():
     fecha_actual_iso = datetime.now().strftime("%Y-%m-%d")
     return render_template("index.html", fecha_actual_iso=fecha_actual_iso)
 
-# ------------------ DESCARGA / VISUALIZADOR ------------------
+# ------------------ PÁGINA DE CONSULTA DOCUMENTOS ------------------
+@app.route('/documentos', methods=['GET', 'POST'])
+def documentos():
+    if 'usuario' not in session:
+        return redirect('/login')
+    return render_template("consulta_documentos.html")
+
+# ------------------ DESCARGA / VISUALIZADOR CON AUDITORÍA ------------------
 @app.route('/descargar/<id>')
 def descargar(id):
     if 'usuario' not in session:
         return "No autorizado", 403
 
     tipo = request.args.get('tipo', 'INE')
+    usuario = session['usuario']['username']
+
     try:
         if tipo == 'INE':
             fecha_corte = datetime.now().strftime("%Y-%m-%d")
@@ -285,11 +294,14 @@ def descargar(id):
             headers = {"Token": TOKEN, "Content-Type": "application/json"}
             res = requests.post(ENDPOINT, json=payload, headers=headers)
             data = res.json() if res.ok else None
+
             if not data or "estadoCuenta" not in data:
+                auditar_documento(usuario, "INE", "INE completo", id, 0, "Crédito no encontrado o sin datosCliente")
                 return "Crédito no encontrado o sin datosCliente", 404
 
             idCliente = data["estadoCuenta"].get("datosCliente", {}).get("idCliente")
             if not idCliente:
+                auditar_documento(usuario, "INE", "INE completo", id, 0, "No se encontró idCliente")
                 return "No se encontró idCliente para este crédito", 404
 
             url_frente = f"http://54.167.121.148:8081/s3/downloadS3File?fileName=INE/{idCliente}_frente.jpeg"
@@ -303,16 +315,19 @@ def descargar(id):
             if r2.status_code != 200:
                 faltantes.append("Reverso")
             if faltantes:
+                auditar_documento(usuario, "INE", "INE completo", id, 0, f"No se encontraron los archivos: {', '.join(faltantes)}")
                 return f"No se encontraron los archivos: {', '.join(faltantes)}", 404
 
+            # ✅ Descarga exitosa
             img1 = Image.open(BytesIO(r1.content)).convert("RGB")
             img2 = Image.open(BytesIO(r2.content)).convert("RGB")
             img1.info['dpi'] = (150, 150)
             img2.info['dpi'] = (150, 150)
-
             pdf_bytes = BytesIO()
             img1.save(pdf_bytes, format='PDF', save_all=True, append_images=[img2])
             pdf_bytes.seek(0)
+
+            auditar_documento(usuario, "INE", "INE completo", id, 1, None)
             return Response(
                 pdf_bytes.read(),
                 mimetype='application/pdf',
@@ -323,42 +338,29 @@ def descargar(id):
             url = f"http://54.167.121.148:8081/s3/downloadS3File?fileName=CEP/{id}_cep.jpeg"
             r = requests.get(url)
             if r.status_code != 200:
+                auditar_documento(usuario, "CEP", "CEP completo", id, 0, "Archivo CEP no encontrado")
                 return "Archivo CEP no encontrado", 404
+
+            auditar_documento(usuario, "CEP", "CEP completo", id, 1, None)
             return Response(r.content, mimetype='image/jpeg')
 
         elif tipo == 'Contrato':
             url = f"http://54.167.121.148:8081/s3/downloadS3File?fileName=VALIDACIONES/{id}_validaciones.pdf"
             r = requests.get(url)
             if r.status_code != 200:
+                auditar_documento(usuario, "Contrato", "Contrato validaciones", id, 0, "Cliente no encontrado en la Base de Datos")
                 return "Cliente no encontrado en la Base de Datos", 404
+
+            auditar_documento(usuario, "Contrato", "Contrato validaciones", id, 1, None)
             return Response(r.content, mimetype='application/pdf')
 
         else:
+            auditar_documento(usuario, tipo, tipo, id, 0, "Tipo de documento no válido")
             return "Tipo de documento no válido", 400
 
-    except Exception:
+    except Exception as e:
+        auditar_documento(usuario, tipo, tipo, id, 0, f"Error interno: {e}")
         return "Cliente no encontrado en la Base de Datos", 500
-# ------------------ CONSULTA DOCUMENTOS ------------------
-@app.route('/documentos', methods=['GET', 'POST'])
-def documentos():
-    if 'usuario' not in session:
-        return redirect('/login')
-
-    if request.method == 'POST':
-        documento_clave = request.form.get("documento_clave")
-        documento_nombre = request.form.get("documento_nombre")
-        id_referencia = request.form.get("id_referencia")
-
-        # 🔹 Simulación de búsqueda de documento (reemplazar por tu lógica real)
-        encontrado = False
-        if encontrado:
-            auditar_documento(session['usuario']['username'], documento_clave, documento_nombre, id_referencia, 1, None)
-            return render_template("consulta_documentos.html", exito=True)
-        else:
-            auditar_documento(session['usuario']['username'], documento_clave, documento_nombre, id_referencia, 0, "Documento no encontrado")
-            return render_template("consulta_documentos.html", error="Documento no encontrado")
-
-    return render_template("consulta_documentos.html")
 
 # ------------------ INICIO ------------------
 if __name__ == "__main__":
