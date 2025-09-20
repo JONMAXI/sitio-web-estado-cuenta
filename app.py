@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, session, Response, send_file
+from flask import Flask, render_template, request, redirect, session, Response
 import mysql.connector
 import requests
 from datetime import datetime
@@ -10,7 +10,7 @@ import re
 from google.cloud import storage
 
 app = Flask(__name__)
-app.secret_key = 'clave_super_secreta'
+app.secret_key = os.environ.get("SECRET_KEY", "clave_super_secreta")
 
 # ------------------ CONFIGURACIÓN BASE DE DATOS ------------------
 db_config = {
@@ -21,14 +21,13 @@ db_config = {
 }
 
 # ------------------ CONFIGURACIÓN GOOGLE CLOUD STORAGE ------------------
-GCS_BUCKET = "bucket_documentos"
-gcs_client = storage.Client()  # Se crea una sola vez al iniciar la app
-bucket = gcs_client.bucket(GCS_BUCKET)  # Bucket global
-
+GCS_BUCKET = os.environ.get("GCS_BUCKET", "bucket_documentos")
+gcs_client = storage.Client()
+bucket = gcs_client.bucket(GCS_BUCKET)
 
 # ------------------ CONFIGURACIÓN API EXTERNA ------------------
-TOKEN = "3oJVoAHtwWn7oBT4o340gFkvq9uWRRmpFo7p"
-ENDPOINT = "https://servicios.s2movil.net/s2maxikash/estadocuenta"
+TOKEN = os.environ.get("TOKEN", "3oJVoAHtwWn7oBT4o340gFkvq9uWRRmpFo7p")
+ENDPOINT = os.environ.get("ENDPOINT", "https://servicios.s2movil.net/s2maxikash/estadocuenta")
 
 # ------------------ UTILIDADES ------------------
 def _extraer_numero_cuota(concepto):
@@ -78,7 +77,6 @@ def safe_date(date_str, fmt="%Y-%m-%d %H:%M:%S"):
 
 # ------------------ FUNCIONES DE AUDITORÍA ------------------
 def auditar_estado_cuenta(usuario, id_credito, fecha_corte, exito, mensaje_error=None):
-    """Registra en auditoria_estado_cuenta"""
     try:
         conn = mysql.connector.connect(**db_config)
         cur = conn.cursor()
@@ -93,7 +91,6 @@ def auditar_estado_cuenta(usuario, id_credito, fecha_corte, exito, mensaje_error
         print(f"[AUDITORIA] Error registrando estado de cuenta: {e}")
 
 def auditar_documento(usuario, documento_clave, documento_nombre, id_referencia, exito, mensaje_error=None):
-    """Registra en auditoria_documentos"""
     try:
         conn = mysql.connector.connect(**db_config)
         cur = conn.cursor()
@@ -293,6 +290,7 @@ def descargar(id):
 
     tipo = request.args.get('tipo', 'INE')
     usuario = session['usuario']['username']
+    bucket_path = None  # Inicializamos para el except
 
     try:
         # Determinar path en bucket
@@ -308,7 +306,6 @@ def descargar(id):
 
         blob = bucket.blob(bucket_path)
         if blob.exists():
-            # Archivo ya está en bucket, lo retornamos
             content = blob.download_as_bytes()
             mimetype = "application/pdf" if bucket_path.endswith(".pdf") else "image/jpeg"
             auditar_documento(usuario, tipo, bucket_path, id, 1, None)
@@ -318,8 +315,8 @@ def descargar(id):
         if tipo == 'INE':
             fecha_corte = datetime.now().strftime("%Y-%m-%d")
             payload = {"idCredito": int(id), "fechaCorte": fecha_corte}
-            headers = {"Token": os.environ.get("TOKEN"), "Content-Type": "application/json"}
-            res = requests.post(os.environ.get("ENDPOINT"), json=payload, headers=headers)
+            headers = {"Token": TOKEN, "Content-Type": "application/json"}
+            res = requests.post(ENDPOINT, json=payload, headers=headers)
             data = res.json() if res.ok else None
             if not data or "estadoCuenta" not in data:
                 auditar_documento(usuario, tipo, bucket_path, id, 0, "Crédito no encontrado")
@@ -344,7 +341,6 @@ def descargar(id):
                 auditar_documento(usuario, tipo, bucket_path, id, 0, f"No se encontraron: {', '.join(faltantes)}")
                 return f"No se encontraron los archivos: {', '.join(faltantes)}", 404
 
-            # Convertimos a PDF
             img1 = Image.open(BytesIO(r1.content)).convert("RGB")
             img2 = Image.open(BytesIO(r2.content)).convert("RGB")
             img1.info['dpi'] = (150, 150)
@@ -352,8 +348,6 @@ def descargar(id):
             pdf_bytes = BytesIO()
             img1.save(pdf_bytes, format='PDF', save_all=True, append_images=[img2])
             pdf_bytes.seek(0)
-
-            # Guardamos en bucket
             blob.upload_from_file(pdf_bytes, content_type="application/pdf")
             auditar_documento(usuario, tipo, bucket_path, id, 1, None)
             pdf_bytes.seek(0)
@@ -380,8 +374,10 @@ def descargar(id):
             return Response(r.content, mimetype='application/pdf')
 
     except Exception as e:
-        auditar_documento(usuario, tipo, bucket_path, id, 0, str(e))
+        if bucket_path:
+            auditar_documento(usuario, tipo, bucket_path, id, 0, str(e))
         return f"Error interno: {e}", 500
+
 # ------------------ INICIO ------------------
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))
