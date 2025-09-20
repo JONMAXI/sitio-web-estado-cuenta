@@ -69,6 +69,41 @@ def safe_date(date_str, fmt="%Y-%m-%d %H:%M:%S"):
     except (ValueError, TypeError):
         return None
 
+# ------------------ FUNCIONES DE AUDITORÍA ------------------
+def auditar_estado_cuenta(usuario, id_credito, fecha_corte, exito, mensaje_error=None):
+    """
+    Registra en la tabla auditoria_estado_cuenta
+    """
+    try:
+        conn = mysql.connector.connect(**db_config)
+        cur = conn.cursor()
+        cur.execute("""
+            INSERT INTO auditoria_estado_cuenta (usuario, id_credito, fecha_corte, exito, mensaje_error)
+            VALUES (%s, %s, %s, %s, %s)
+        """, (usuario, id_credito, fecha_corte, exito, mensaje_error))
+        conn.commit()
+        cur.close()
+        conn.close()
+    except Exception as e:
+        print(f"[AUDITORIA] Error registrando estado de cuenta: {e}")
+
+def auditar_documento(usuario, documento_clave, documento_nombre, id_referencia, exito, mensaje_error=None):
+    """
+    Registra en la tabla auditoria_documentos
+    """
+    try:
+        conn = mysql.connector.connect(**db_config)
+        cur = conn.cursor()
+        cur.execute("""
+            INSERT INTO auditoria_documentos (usuario, documento_clave, documento_nombre, id_referencia, exito, mensaje_error)
+            VALUES (%s, %s, %s, %s, %s, %s)
+        """, (usuario, documento_clave, documento_nombre, id_referencia, exito, mensaje_error))
+        conn.commit()
+        cur.close()
+        conn.close()
+    except Exception as e:
+        print(f"[AUDITORIA] Error registrando documento: {e}")
+
 # ------------------ PROCESAR ESTADO DE CUENTA ------------------
 def procesar_estado_cuenta(estado_cuenta):
     try:
@@ -196,7 +231,7 @@ def logout():
     session.pop('usuario', None)
     return redirect('/login')
 
-# ------------------ CONSULTA ------------------
+# ------------------ CONSULTA ESTADO DE CUENTA ------------------
 @app.route('/', methods=['GET', 'POST'])
 def index():
     if 'usuario' not in session:
@@ -216,10 +251,14 @@ def index():
             res = requests.post(ENDPOINT, json=payload, headers=headers, timeout=15)
             data = res.json()
         except Exception:
+            # 🔹 Auditoría cuando la API no responde
+            auditar_estado_cuenta(session['usuario']['username'], id_credito, fecha_corte, 0, "Respuesta no válida del servidor")
             return render_template("resultado.html", error="Respuesta no válida del servidor")
 
         if res.status_code != 200 or "estadoCuenta" not in data:
             mensaje = data.get("mensaje", ["Error desconocido"])[0] if data else "No se encontraron datos para este crédito"
+            # 🔹 Auditoría cuando el crédito no existe
+            auditar_estado_cuenta(session['usuario']['username'], id_credito, fecha_corte, 0, mensaje)
             return render_template("resultado.html", error=mensaje)
 
         estado_cuenta = data["estadoCuenta"]
@@ -231,7 +270,11 @@ def index():
             and not estado_cuenta.get("datosCargos")
             and not estado_cuenta.get("datosPagos")
         ):
+            auditar_estado_cuenta(session['usuario']['username'], id_credito, fecha_corte, 0, "Crédito vacío")
             return render_template("resultado.html", usuario_no_existe=True)
+
+        # 🔹 Auditoría de éxito
+        auditar_estado_cuenta(session['usuario']['username'], id_credito, fecha_corte, 1, None)
 
         tabla = procesar_estado_cuenta(estado_cuenta)
         return render_template("resultado.html", datos=estado_cuenta, resultado=tabla)
@@ -247,11 +290,26 @@ def descargar(id):
     # Aquí dejas la lógica de descarga que ya tenías...
     return "Implementación descarga aquí"
 
-# ------------------ PÁGINA DE CONSULTA DOCUMENTOS ------------------
+# ------------------ CONSULTA DOCUMENTOS ------------------
 @app.route('/documentos', methods=['GET', 'POST'])
 def documentos():
     if 'usuario' not in session:
         return redirect('/login')
+
+    if request.method == 'POST':
+        documento_clave = request.form.get("documento_clave")
+        documento_nombre = request.form.get("documento_nombre")
+        id_referencia = request.form.get("id_referencia")
+
+        # 🔹 Simulación de búsqueda de documento
+        encontrado = False  # <- Aquí reemplazas con tu lógica real
+        if encontrado:
+            auditar_documento(session['usuario']['username'], documento_clave, documento_nombre, id_referencia, 1, None)
+            return render_template("consulta_documentos.html", exito=True)
+        else:
+            auditar_documento(session['usuario']['username'], documento_clave, documento_nombre, id_referencia, 0, "Documento no encontrado")
+            return render_template("consulta_documentos.html", error="Documento no encontrado")
+
     return render_template("consulta_documentos.html")
 
 # ------------------ INICIO ------------------
