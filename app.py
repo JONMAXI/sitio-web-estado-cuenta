@@ -7,6 +7,7 @@ import os
 from io import BytesIO
 from PIL import Image
 import re
+from google.cloud import storage
 
 app = Flask(__name__)
 app.secret_key = 'clave_super_secreta'
