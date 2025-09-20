@@ -26,10 +26,6 @@ gcs_client = storage.Client()  # Se crea una sola vez al iniciar la app
 bucket = gcs_client.bucket(GCS_BUCKET)  # Bucket global
 
 
-# ------------------ CONFIGURACIÓN GOOGLE CLOUD STORAGE ------------------
-GCS_BUCKET = "bucket_documentos"
-gcs_client = storage.Client()  # Se crea una sola vez al iniciar la app
-bucket = gcs_client.bucket(GCS_BUCKET)  # Bucket global
 # ------------------ CONFIGURACIÓN API EXTERNA ------------------
 TOKEN = "3oJVoAHtwWn7oBT4o340gFkvq9uWRRmpFo7p"
 ENDPOINT = "https://servicios.s2movil.net/s2maxikash/estadocuenta"
