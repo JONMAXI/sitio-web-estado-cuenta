@@ -4,9 +4,8 @@ import requests
 from datetime import datetime
 import hashlib
 import os
-from io import BytesIO
-from PIL import Image
 import re
+import fitz  # PyMuPDF para manejar PDFs
 
 app = Flask(__name__)
 app.secret_key = 'clave_super_secreta'
@@ -71,9 +70,6 @@ def safe_date(date_str, fmt="%Y-%m-%d %H:%M:%S"):
 
 # ------------------ FUNCIONES DE AUDITORÍA ------------------
 def auditar_estado_cuenta(usuario, id_credito, fecha_corte, exito, mensaje_error=None):
-    """
-    Registra en la tabla auditoria_estado_cuenta
-    """
     try:
         conn = mysql.connector.connect(**db_config)
         cur = conn.cursor()
@@ -88,9 +84,6 @@ def auditar_estado_cuenta(usuario, id_credito, fecha_corte, exito, mensaje_error
         print(f"[AUDITORIA] Error registrando estado de cuenta: {e}")
 
 def auditar_documento(usuario, documento_clave, documento_nombre, id_referencia, exito, mensaje_error=None):
-    """
-    Registra en la tabla auditoria_documentos
-    """
     try:
         conn = mysql.connector.connect(**db_config)
         cur = conn.cursor()
@@ -128,7 +121,6 @@ def procesar_estado_cuenta(estado_cuenta):
             })
 
         cargos_sorted = sorted(cargos, key=lambda c: safe_int(c.get("idCargo"), 0))
-
         pagos_por_cuota_index = {}
         for pago in pagos_list:
             for cnum in pago["cuotas"]:
@@ -144,7 +136,7 @@ def procesar_estado_cuenta(estado_cuenta):
             monto_cargo = safe_float(cargo.get("monto"))
             capital = safe_float(cargo.get("capital"))
             interes = safe_float(cargo.get("interes"))
-            seguro_total = sum(safe_float(cargo.get(k)) for k in ["seguroBienes","seguroVida","seguroDesempleo"])
+            seguro_total = sum(safe_float(cargo.get(k)) for k in ["seguroBienes", "seguroVida", "seguroDesempleo"])
             fecha_venc = cargo.get("fechaVencimiento")
 
             monto_restante_cargo = monto_cargo
@@ -190,7 +182,6 @@ def procesar_estado_cuenta(estado_cuenta):
             })
 
         return sorted(tabla, key=lambda x: safe_int(x["cuota"]))
-
     except Exception as e:
         print(f"[ERROR] procesar_estado_cuenta: {e}")
         return []
@@ -251,19 +242,16 @@ def index():
             res = requests.post(ENDPOINT, json=payload, headers=headers, timeout=15)
             data = res.json()
         except Exception:
-            # 🔹 Auditoría cuando la API no responde
             auditar_estado_cuenta(session['usuario']['username'], id_credito, fecha_corte, 0, "Respuesta no válida del servidor")
             return render_template("resultado.html", error="Respuesta no válida del servidor")
 
         if res.status_code != 200 or "estadoCuenta" not in data:
             mensaje = data.get("mensaje", ["Error desconocido"])[0] if data else "No se encontraron datos para este crédito"
-            # 🔹 Auditoría cuando el crédito no existe
             auditar_estado_cuenta(session['usuario']['username'], id_credito, fecha_corte, 0, mensaje)
             return render_template("resultado.html", error=mensaje)
 
         estado_cuenta = data["estadoCuenta"]
 
-        # 🔒 Validación: si está vacío mostramos SweetAlert
         if (
             not estado_cuenta.get("idCredito")
             and not estado_cuenta.get("datosCliente")
@@ -273,9 +261,7 @@ def index():
             auditar_estado_cuenta(session['usuario']['username'], id_credito, fecha_corte, 0, "Crédito vacío")
             return render_template("resultado.html", usuario_no_existe=True)
 
-        # 🔹 Auditoría de éxito
         auditar_estado_cuenta(session['usuario']['username'], id_credito, fecha_corte, 1, None)
-
         tabla = procesar_estado_cuenta(estado_cuenta)
         return render_template("resultado.html", datos=estado_cuenta, resultado=tabla)
 
@@ -287,8 +273,22 @@ def index():
 def descargar(id):
     if 'usuario' not in session:
         return "No autorizado", 403
-    # Aquí dejas la lógica de descarga que ya tenías...
-    return "Implementación descarga aquí"
+
+    try:
+        # Simulación: generar un PDF válido en memoria
+        pdf_bytes = fitz.open()  # documento vacío
+        page = pdf_bytes.new_page()
+        page.insert_text((72, 72), f"Documento con ID {id}")
+        pdf_bytes_data = pdf_bytes.tobytes()
+        pdf_bytes.close()
+
+        return Response(
+            pdf_bytes_data,
+            mimetype='application/pdf',
+            headers={"Content-Disposition": f"attachment;filename=documento_{id}.pdf"}
+        )
+    except Exception as e:
+        return f"Error generando PDF: {e}", 500
 
 # ------------------ CONSULTA DOCUMENTOS ------------------
 @app.route('/documentos', methods=['GET', 'POST'])
@@ -301,7 +301,6 @@ def documentos():
         documento_nombre = request.form.get("documento_nombre")
         id_referencia = request.form.get("id_referencia")
 
-        # 🔹 Simulación de búsqueda de documento
         encontrado = False  # <- Aquí reemplazas con tu lógica real
         if encontrado:
             auditar_documento(session['usuario']['username'], documento_clave, documento_nombre, id_referencia, 1, None)
