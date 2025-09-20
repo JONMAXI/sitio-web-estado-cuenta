@@ -1,11 +1,12 @@
-from flask import Flask, render_template, request, redirect, session, Response
+from flask import Flask, render_template, request, redirect, session, Response, send_file
 import mysql.connector
 import requests
 from datetime import datetime
 import hashlib
 import os
+from io import BytesIO
+from PIL import Image
 import re
-import fitz  # PyMuPDF para manejar PDFs
 
 app = Flask(__name__)
 app.secret_key = 'clave_super_secreta'
@@ -70,6 +71,7 @@ def safe_date(date_str, fmt="%Y-%m-%d %H:%M:%S"):
 
 # ------------------ FUNCIONES DE AUDITORÍA ------------------
 def auditar_estado_cuenta(usuario, id_credito, fecha_corte, exito, mensaje_error=None):
+    """Registra en auditoria_estado_cuenta"""
     try:
         conn = mysql.connector.connect(**db_config)
         cur = conn.cursor()
@@ -84,6 +86,7 @@ def auditar_estado_cuenta(usuario, id_credito, fecha_corte, exito, mensaje_error
         print(f"[AUDITORIA] Error registrando estado de cuenta: {e}")
 
 def auditar_documento(usuario, documento_clave, documento_nombre, id_referencia, exito, mensaje_error=None):
+    """Registra en auditoria_documentos"""
     try:
         conn = mysql.connector.connect(**db_config)
         cur = conn.cursor()
@@ -136,7 +139,7 @@ def procesar_estado_cuenta(estado_cuenta):
             monto_cargo = safe_float(cargo.get("monto"))
             capital = safe_float(cargo.get("capital"))
             interes = safe_float(cargo.get("interes"))
-            seguro_total = sum(safe_float(cargo.get(k)) for k in ["seguroBienes", "seguroVida", "seguroDesempleo"])
+            seguro_total = sum(safe_float(cargo.get(k)) for k in ["seguroBienes","seguroVida","seguroDesempleo"])
             fecha_venc = cargo.get("fechaVencimiento")
 
             monto_restante_cargo = monto_cargo
@@ -274,21 +277,15 @@ def descargar(id):
     if 'usuario' not in session:
         return "No autorizado", 403
 
+    # 🔹 Ejemplo: archivo dummy para descarga (reemplazar por tu lógica real)
     try:
-        # Simulación: generar un PDF válido en memoria
-        pdf_bytes = fitz.open()  # documento vacío
-        page = pdf_bytes.new_page()
-        page.insert_text((72, 72), f"Documento con ID {id}")
-        pdf_bytes_data = pdf_bytes.tobytes()
-        pdf_bytes.close()
-
-        return Response(
-            pdf_bytes_data,
-            mimetype='application/pdf',
-            headers={"Content-Disposition": f"attachment;filename=documento_{id}.pdf"}
-        )
+        # Crear archivo en memoria
+        buffer = BytesIO()
+        buffer.write(b"Contenido de ejemplo del archivo para id: %s" % id.encode())
+        buffer.seek(0)
+        return send_file(buffer, as_attachment=True, download_name=f"archivo_{id}.txt", mimetype="text/plain")
     except Exception as e:
-        return f"Error generando PDF: {e}", 500
+        return f"Error al generar el archivo: {e}", 500
 
 # ------------------ CONSULTA DOCUMENTOS ------------------
 @app.route('/documentos', methods=['GET', 'POST'])
@@ -301,7 +298,8 @@ def documentos():
         documento_nombre = request.form.get("documento_nombre")
         id_referencia = request.form.get("id_referencia")
 
-        encontrado = False  # <- Aquí reemplazas con tu lógica real
+        # 🔹 Simulación de búsqueda de documento (reemplazar por tu lógica real)
+        encontrado = False
         if encontrado:
             auditar_documento(session['usuario']['username'], documento_clave, documento_nombre, id_referencia, 1, None)
             return render_template("consulta_documentos.html", exito=True)
