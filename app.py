@@ -2,7 +2,6 @@ from flask import Flask, render_template, request, redirect, session, Response, 
 import mysql.connector
 import requests
 from datetime import datetime
-from pytz import timezone
 import hashlib
 import os
 from io import BytesIO
@@ -19,14 +18,6 @@ db_config = {
     'database': os.environ.get('DB_NAME'),
     'unix_socket': f"/cloudsql/{os.environ.get('DB_CONNECTION_NAME')}"
 }
-
-def get_connection():
-    """Crea conexión y ajusta la zona horaria a CDMX"""
-    conn = mysql.connector.connect(**db_config)
-    cur = conn.cursor()
-    cur.execute("SET time_zone = 'America/Mexico_City'")
-    cur.close()
-    return conn
 
 # ------------------ CONFIGURACIÓN API EXTERNA ------------------
 TOKEN = "3oJVoAHtwWn7oBT4o340gFkvq9uWRRmpFo7p"
@@ -82,7 +73,7 @@ def safe_date(date_str, fmt="%Y-%m-%d %H:%M:%S"):
 def auditar_estado_cuenta(usuario, id_credito, fecha_corte, exito, mensaje_error=None):
     """Registra en auditoria_estado_cuenta"""
     try:
-        conn = get_connection()
+        conn = mysql.connector.connect(**db_config)
         cur = conn.cursor()
         cur.execute("""
             INSERT INTO auditoria_estado_cuenta (usuario, id_credito, fecha_corte, exito, mensaje_error)
@@ -97,7 +88,7 @@ def auditar_estado_cuenta(usuario, id_credito, fecha_corte, exito, mensaje_error
 def auditar_documento(usuario, documento_clave, documento_nombre, id_referencia, exito, mensaje_error=None):
     """Registra en auditoria_documentos"""
     try:
-        conn = get_connection()
+        conn = mysql.connector.connect(**db_config)
         cur = conn.cursor()
         cur.execute("""
             INSERT INTO auditoria_documentos (usuario, documento_clave, documento_nombre, id_referencia, exito, mensaje_error)
@@ -205,7 +196,7 @@ def login():
         username = request.form['username']
         password = hashlib.sha256(request.form['password'].encode()).hexdigest()
         try:
-            conn = get_connection()
+            conn = mysql.connector.connect(**db_config)
             cur = conn.cursor(dictionary=True)
             cur.execute(
                 "SELECT * FROM usuarios WHERE username = %s AND password = %s",
