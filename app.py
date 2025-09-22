@@ -11,7 +11,6 @@ import re
 
 app = Flask(__name__)
 app.secret_key = 'clave_super_secreta'
-cdmx_now = datetime.now(timezone("America/Mexico_City"))
 
 # ------------------ CONFIGURACIÓN BASE DE DATOS ------------------
 db_config = {
