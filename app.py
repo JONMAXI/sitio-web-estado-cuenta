@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, redirect, session, Response, send_file
 import requests
 from datetime import datetime
+from zoneinfo import ZoneInfo  # <-- Para manejar zona horaria CDMX
 import hashlib
 import os
 from io import BytesIO
@@ -266,7 +267,8 @@ def index():
         tabla = procesar_estado_cuenta(estado_cuenta)
         return render_template("resultado.html", datos=estado_cuenta, resultado=tabla)
 
-    fecha_actual_iso = datetime.now().strftime("%Y-%m-%d")
+    # <-- Aquí usamos hora CDMX
+    fecha_actual_iso = datetime.now(ZoneInfo("America/Mexico_City")).strftime("%Y-%m-%d")
     return render_template("index.html", fecha_actual_iso=fecha_actual_iso)
 
 # ------------------ PÁGINA DE CONSULTA DOCUMENTOS ------------------
@@ -287,7 +289,8 @@ def descargar(id):
 
     try:
         if tipo == 'INE':
-            fecha_corte = datetime.now().strftime("%Y-%m-%d")
+            # <-- Hora CDMX
+            fecha_corte = datetime.now(ZoneInfo("America/Mexico_City")).strftime("%Y-%m-%d")
             payload = {"idCredito": int(id), "fechaCorte": fecha_corte}
             headers = {"Token": TOKEN, "Content-Type": "application/json"}
             res = requests.post(ENDPOINT, json=payload, headers=headers)
