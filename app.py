@@ -1,5 +1,4 @@
 from flask import Flask, render_template, request, redirect, session, Response, send_file
-import mysql.connector
 import requests
 from datetime import datetime
 import hashlib
@@ -7,17 +6,10 @@ import os
 from io import BytesIO
 from PIL import Image
 import re
+from db import get_connection  # <-- Importamos la conexión centralizada
 
 app = Flask(__name__)
 app.secret_key = 'clave_super_secreta'
-
-# ------------------ CONFIGURACIÓN BASE DE DATOS ------------------
-db_config = {
-    'user': os.environ.get('DB_USER'),
-    'password': os.environ.get('DB_PASSWORD'),
-    'database': os.environ.get('DB_NAME'),
-    'unix_socket': f"/cloudsql/{os.environ.get('DB_CONNECTION_NAME')}"
-}
 
 # ------------------ CONFIGURACIÓN API EXTERNA ------------------
 TOKEN = "3oJVoAHtwWn7oBT4o340gFkvq9uWRRmpFo7p"
@@ -73,7 +65,9 @@ def safe_date(date_str, fmt="%Y-%m-%d %H:%M:%S"):
 def auditar_estado_cuenta(usuario, id_credito, fecha_corte, exito, mensaje_error=None):
     """Registra en auditoria_estado_cuenta"""
     try:
-        conn = mysql.connector.connect(**db_config)
+        conn = get_connection()
+        if conn is None:
+            return
         cur = conn.cursor()
         cur.execute("""
             INSERT INTO auditoria_estado_cuenta (usuario, id_credito, fecha_corte, exito, mensaje_error)
@@ -88,7 +82,9 @@ def auditar_estado_cuenta(usuario, id_credito, fecha_corte, exito, mensaje_error
 def auditar_documento(usuario, documento_clave, documento_nombre, id_referencia, exito, mensaje_error=None):
     """Registra en auditoria_documentos"""
     try:
-        conn = mysql.connector.connect(**db_config)
+        conn = get_connection()
+        if conn is None:
+            return
         cur = conn.cursor()
         cur.execute("""
             INSERT INTO auditoria_documentos (usuario, documento_clave, documento_nombre, id_referencia, exito, mensaje_error)
@@ -196,7 +192,9 @@ def login():
         username = request.form['username']
         password = hashlib.sha256(request.form['password'].encode()).hexdigest()
         try:
-            conn = mysql.connector.connect(**db_config)
+            conn = get_connection()
+            if conn is None:
+                return "Error de conexión a la base de datos", 500
             cur = conn.cursor(dictionary=True)
             cur.execute(
                 "SELECT * FROM usuarios WHERE username = %s AND password = %s",
@@ -205,7 +203,7 @@ def login():
             user = cur.fetchone()
             cur.close()
             conn.close()
-        except mysql.connector.Error as err:
+        except Exception as err:
             return f"Error de conexión a MySQL: {err}"
 
         if user:
