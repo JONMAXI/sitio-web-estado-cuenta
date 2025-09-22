@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, redirect, session, Response, 
 import mysql.connector
 import requests
 from datetime import datetime
+from pytz import timezone
 import hashlib
 import os
 from io import BytesIO
@@ -10,6 +11,7 @@ import re
 
 app = Flask(__name__)
 app.secret_key = 'clave_super_secreta'
+cdmx_now = datetime.now(timezone("America/Mexico_City"))
 
 # ------------------ CONFIGURACIÓN BASE DE DATOS ------------------
 db_config = {
