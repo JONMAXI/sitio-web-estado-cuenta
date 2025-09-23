@@ -1,12 +1,12 @@
 from flask import Flask, render_template, request, redirect, session, Response, send_file
 import requests
 from datetime import datetime
-from zoneinfo import ZoneInfo  # <-- Para manejar zona horaria CDMX
 import hashlib
 import os
 from io import BytesIO
 from PIL import Image
 import re
+from zoneinfo import ZoneInfo
 from db import get_connection  # <-- Importamos la conexión centralizada
 
 app = Flask(__name__)
@@ -63,13 +63,18 @@ def safe_date(date_str, fmt="%Y-%m-%d %H:%M:%S"):
         return None
 
 # ------------------ FUNCIONES DE AUDITORÍA ------------------
-def auditar_estado_cuenta(usuario, id_credito, fecha_corte, exito, mensaje_error=None):
-    """Registra en auditoria_estado_cuenta"""
+def auditar_estado_cuenta(usuario, id_credito, fecha_corte=None, exito=1, mensaje_error=None):
+    """Registra en auditoria_estado_cuenta con hora CDMX"""
     try:
         conn = get_connection()
         if conn is None:
             return
         cur = conn.cursor()
+
+        # Si no se pasa fecha_corte, tomar la actual en CDMX
+        if fecha_corte is None:
+            fecha_corte = datetime.now(ZoneInfo("America/Mexico_City")).strftime("%Y-%m-%d %H:%M:%S")
+
         cur.execute("""
             INSERT INTO auditoria_estado_cuenta (usuario, id_credito, fecha_corte, exito, mensaje_error)
             VALUES (%s, %s, %s, %s, %s)
@@ -80,17 +85,21 @@ def auditar_estado_cuenta(usuario, id_credito, fecha_corte, exito, mensaje_error
     except Exception as e:
         print(f"[AUDITORIA] Error registrando estado de cuenta: {e}")
 
-def auditar_documento(usuario, documento_clave, documento_nombre, id_referencia, exito, mensaje_error=None):
-    """Registra en auditoria_documentos"""
+def auditar_documento(usuario, documento_clave, documento_nombre, id_referencia, exito=1, mensaje_error=None):
+    """Registra en auditoria_documentos con hora CDMX"""
     try:
         conn = get_connection()
         if conn is None:
             return
         cur = conn.cursor()
+
+        fecha_actual = datetime.now(ZoneInfo("America/Mexico_City")).strftime("%Y-%m-%d %H:%M:%S")
+
+        # Asumimos que la tabla auditoria_documentos tiene columna 'fecha'
         cur.execute("""
-            INSERT INTO auditoria_documentos (usuario, documento_clave, documento_nombre, id_referencia, exito, mensaje_error)
-            VALUES (%s, %s, %s, %s, %s, %s)
-        """, (usuario, documento_clave, documento_nombre, id_referencia, exito, mensaje_error))
+            INSERT INTO auditoria_documentos (usuario, documento_clave, documento_nombre, id_referencia, exito, mensaje_error, fecha)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+        """, (usuario, documento_clave, documento_nombre, id_referencia, exito, mensaje_error, fecha_actual))
         conn.commit()
         cur.close()
         conn.close()
@@ -232,24 +241,32 @@ def index():
 
     if request.method == 'POST':
         id_credito = request.form['idCredito']
-        fecha_corte = request.form['fechaCorte'].strip()
-        try:
-            datetime.strptime(fecha_corte, "%Y-%m-%d")
-        except ValueError:
-            return render_template("index.html", error="Fecha inválida. Usa formato AAAA-MM-DD.", fecha_actual_iso=fecha_corte)
+        fecha_corte_str = request.form['fechaCorte'].strip()
 
-        payload = {"idCredito": int(id_credito), "fechaCorte": fecha_corte}
+        # Convertir fecha del formulario a datetime en CDMX
+        try:
+            fecha_corte = datetime.strptime(fecha_corte_str, "%Y-%m-%d")
+            fecha_corte = fecha_corte.replace(tzinfo=ZoneInfo("America/Mexico_City"))
+            fecha_corte_iso = fecha_corte.strftime("%Y-%m-%d")
+        except ValueError:
+            return render_template(
+                "index.html",
+                error="Fecha inválida. Usa formato AAAA-MM-DD.",
+                fecha_actual_iso=fecha_corte_str
+            )
+
+        payload = {"idCredito": int(id_credito), "fechaCorte": fecha_corte_iso}
         headers = {"Token": TOKEN, "Content-Type": "application/json"}
         try:
             res = requests.post(ENDPOINT, json=payload, headers=headers, timeout=15)
             data = res.json()
         except Exception:
-            auditar_estado_cuenta(session['usuario']['username'], id_credito, fecha_corte, 0, "Respuesta no válida del servidor")
+            auditar_estado_cuenta(session['usuario']['username'], id_credito, fecha_corte_iso, 0, "Respuesta no válida del servidor")
             return render_template("resultado.html", error="Respuesta no válida del servidor")
 
         if res.status_code != 200 or "estadoCuenta" not in data:
             mensaje = data.get("mensaje", ["Error desconocido"])[0] if data else "No se encontraron datos para este crédito"
-            auditar_estado_cuenta(session['usuario']['username'], id_credito, fecha_corte, 0, mensaje)
+            auditar_estado_cuenta(session['usuario']['username'], id_credito, fecha_corte_iso, 0, mensaje)
             return render_template("resultado.html", error=mensaje)
 
         estado_cuenta = data["estadoCuenta"]
@@ -260,16 +277,16 @@ def index():
             and not estado_cuenta.get("datosCargos")
             and not estado_cuenta.get("datosPagos")
         ):
-            auditar_estado_cuenta(session['usuario']['username'], id_credito, fecha_corte, 0, "Crédito vacío")
+            auditar_estado_cuenta(session['usuario']['username'], id_credito, fecha_corte_iso, 0, "Crédito vacío")
             return render_template("resultado.html", usuario_no_existe=True)
 
-        auditar_estado_cuenta(session['usuario']['username'], id_credito, fecha_corte, 1, None)
+        auditar_estado_cuenta(session['usuario']['username'], id_credito, fecha_corte_iso, 1, None)
         tabla = procesar_estado_cuenta(estado_cuenta)
         return render_template("resultado.html", datos=estado_cuenta, resultado=tabla)
 
-    # <-- Aquí usamos hora CDMX
-    fecha_actual_iso = datetime.now(ZoneInfo("America/Mexico_City")).strftime("%Y-%m-%d")
-    return render_template("index.html", fecha_actual_iso=fecha_actual_iso)
+    # Para GET, mostrar fecha actual CDMX
+    fecha_actual_cdmx = datetime.now(ZoneInfo("America/Mexico_City")).strftime("%Y-%m-%d")
+    return render_template("index.html", fecha_actual_iso=fecha_actual_cdmx)
 
 # ------------------ PÁGINA DE CONSULTA DOCUMENTOS ------------------
 @app.route('/documentos', methods=['GET', 'POST'])
@@ -289,7 +306,7 @@ def descargar(id):
 
     try:
         if tipo == 'INE':
-            # <-- Hora CDMX
+            # Fecha CDMX
             fecha_corte = datetime.now(ZoneInfo("America/Mexico_City")).strftime("%Y-%m-%d")
             payload = {"idCredito": int(id), "fechaCorte": fecha_corte}
             headers = {"Token": TOKEN, "Content-Type": "application/json"}
