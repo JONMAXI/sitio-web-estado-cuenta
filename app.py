@@ -89,7 +89,7 @@ def auditar_documento(usuario, documento_clave, documento_nombre, id_referencia,
         cur.execute("""
             INSERT INTO auditoria_documentos (usuario, documento_clave, documento_nombre, id_referencia, exito, mensaje_error)
             VALUES (%s, %s, %s, %s, %s, %s)
-        """, (usuario, documento_clave, documento_nombre, id_referencia, DATE_SUB(NOW(), INTERVAL 6 HOUR), exito, mensaje_error))
+        """, (usuario, documento_clave, documento_nombre, id_referencia, exito, mensaje_error))
         conn.commit()
         cur.close()
         conn.close()
