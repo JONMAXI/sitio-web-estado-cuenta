@@ -6,7 +6,7 @@ import os
 from io import BytesIO
 from PIL import Image
 import re
-from db import get_connection  # <-- Importamos la conexión centralizada
+from db import get_connection
 
 app = Flask(__name__)
 app.secret_key = 'clave_super_secreta'
@@ -61,7 +61,7 @@ def safe_date(date_str, fmt="%Y-%m-%d %H:%M:%S"):
     except (ValueError, TypeError):
         return None
 
-# ------------------ FUNCIONES DE AUDITORÍA ------------------
+# ------------------ AUDITORÍA ------------------
 def auditar_estado_cuenta(usuario, id_credito, fecha_corte, exito, mensaje_error=None):
     try:
         with get_connection() as conn:
@@ -92,19 +92,97 @@ def auditar_documento(usuario, documento_clave, documento_nombre, id_referencia,
     except Exception as e:
         print(f"[AUDITORIA] Error registrando documento: {e}")
 
-# ------------------ FUNCIONES DE PROCESAMIENTO ------------------
+# ------------------ PROCESAR ESTADO DE CUENTA ------------------
 def procesar_estado_cuenta(estado_cuenta):
-    """
-    Función mínima para procesar estado de cuenta.
-    Retorna los datos tal cual (puedes adaptar luego).
-    """
-    return estado_cuenta
+    try:
+        cargos = estado_cuenta.get("datosCargos") or []
+        if not isinstance(cargos, list):
+            cargos = []
+        pagos = estado_cuenta.get("datosPagos") or []
+        if not isinstance(pagos, list):
+            pagos = []
 
+        pagos_list = []
+        for p in pagos:
+            monto_pago = safe_float(p.get("montoPago"), 0.0)
+            cuotas = _parse_cuotas_field(p.get("numeroCuotaSemanal"))
+            pagos_list.append({
+                "idPago": p.get("idPago"),
+                "remaining": monto_pago,
+                "cuotas": cuotas,
+                "fechaValor": p.get("fechaValor"),
+                "fechaRegistro": p.get("fechaRegistro"),
+                "montoPagoOriginal": monto_pago
+            })
+
+        cargos_sorted = sorted(cargos, key=lambda c: safe_int(c.get("idCargo"), 0))
+        pagos_por_cuota_index = {}
+        for pago in pagos_list:
+            for cnum in pago["cuotas"]:
+                pagos_por_cuota_index.setdefault(cnum, []).append(pago)
+
+        tabla = []
+        for cargo in cargos_sorted:
+            concepto = cargo.get("concepto", "")
+            cuota_num = _extraer_numero_cuota(concepto)
+            if cuota_num is None:
+                cuota_num = safe_int(cargo.get("idCargo"))
+
+            monto_cargo = safe_float(cargo.get("monto"))
+            capital = safe_float(cargo.get("capital"))
+            interes = safe_float(cargo.get("interes"))
+            seguro_total = sum(safe_float(cargo.get(k)) for k in ["seguroBienes","seguroVida","seguroDesempleo"])
+            fecha_venc = cargo.get("fechaVencimiento")
+
+            monto_restante_cargo = monto_cargo
+            aplicados = []
+
+            pagos_relacionados = pagos_por_cuota_index.get(cuota_num, [])
+            pagos_relacionados_sorted = sorted(
+                pagos_relacionados,
+                key=lambda p: safe_date(p.get("fechaRegistro")) or datetime.min
+            )
+
+            for pago in pagos_relacionados_sorted:
+                if monto_restante_cargo <= 0 or pago["remaining"] <= 0:
+                    continue
+                aplicar = min(pago["remaining"], monto_restante_cargo)
+                aplicados.append({
+                    "idPago": pago.get("idPago"),
+                    "montoPago": round(pago["remaining"], 2),
+                    "aplicado": round(aplicar, 2),
+                    "fechaRegistro": pago.get("fechaRegistro"),
+                    "fechaPago": fecha_venc,
+                    "diasMora": None
+                })
+                pago["remaining"] = max(round(pago["remaining"] - aplicar, 2), 0)
+                monto_restante_cargo = max(round(monto_restante_cargo - aplicar, 2), 0)
+
+            total_aplicado = round(monto_cargo - monto_restante_cargo, 2)
+            pendiente = round(max(monto_cargo - total_aplicado, 0.0), 2)
+            excedente = max(round(total_aplicado - monto_cargo, 2), 0.0)
+
+            tabla.append({
+                "cuota": cuota_num,
+                "fecha": fecha_venc,
+                "monto_cargo": round(monto_cargo, 2),
+                "capital": round(capital, 2),
+                "interes": round(interes, 2),
+                "seguro": round(seguro_total, 2),
+                "aplicados": aplicados,
+                "total_pagado": total_aplicado,
+                "pendiente": pendiente,
+                "excedente": excedente,
+                "raw_cargo": cargo
+            })
+
+        return sorted(tabla, key=lambda x: safe_int(x["cuota"]))
+    except Exception as e:
+        print(f"[ERROR] procesar_estado_cuenta: {e}")
+        return []
+
+# ------------------ BÚSQUEDA DE CRÉDITO ------------------
 def buscar_credito_por_nombre(nombre):
-    """
-    Busca créditos por nombre en la base definida en la variable DB_NAME_CLIENTES.
-    Retorna una lista de diccionarios con id_credito y nombre completo.
-    """
     db_clientes = os.environ.get('DB_NAME_CLIENTES')
     if not db_clientes:
         print("[DB ERROR] Variable de entorno DB_NAME_CLIENTES no definida")
@@ -126,63 +204,6 @@ def buscar_credito_por_nombre(nombre):
     return resultados
 
 # ------------------ RUTAS ------------------
-@app.route('/', methods=['GET', 'POST'])
-def index():
-    if 'usuario' not in session:
-        return redirect('/login')
-
-    fecha_actual_iso = datetime.now().strftime("%Y-%m-%d")
-
-    if request.method == 'POST':
-        nombre_busqueda = request.form.get('nombre', '').strip()
-        id_credito_form = request.form.get('idCredito', '').strip()
-        fecha_corte = request.form.get('fechaCorte', fecha_actual_iso).strip()
-
-        try:
-            datetime.strptime(fecha_corte, "%Y-%m-%d")
-        except ValueError:
-            return render_template("index.html", error="Fecha inválida", fecha_actual_iso=fecha_corte)
-
-        resultados = []
-        if nombre_busqueda:
-            resultados = buscar_credito_por_nombre(nombre_busqueda)
-            if not resultados:
-                return render_template("index.html", error="No se encontraron créditos con ese nombre", fecha_actual_iso=fecha_corte)
-            if len(resultados) == 1:
-                id_credito = resultados[0]['id_credito']
-            else:
-                return render_template("index.html", resultados=resultados, fecha_actual_iso=fecha_corte)
-        elif id_credito_form:
-            id_credito = int(id_credito_form)
-        else:
-            return render_template("index.html", error="Debes proporcionar nombre o ID de crédito", fecha_actual_iso=fecha_corte)
-
-        # Consulta al API externa
-        payload = {"idCredito": int(id_credito), "fechaCorte": fecha_corte}
-        headers = {"Token": TOKEN, "Content-Type": "application/json"}
-        try:
-            res = requests.post(ENDPOINT, json=payload, headers=headers, timeout=15)
-            data = res.json()
-        except Exception:
-            auditar_estado_cuenta(session['usuario']['username'], id_credito, fecha_corte, 0, "Respuesta no válida del servidor")
-            return render_template("resultado.html", error="Respuesta no válida del servidor")
-
-        if res.status_code != 200 or "estadoCuenta" not in data:
-            mensaje = data.get("mensaje", ["Error desconocido"])[0] if data else "No se encontraron datos para este crédito"
-            auditar_estado_cuenta(session['usuario']['username'], id_credito, fecha_corte, 0, mensaje)
-            return render_template("resultado.html", error=mensaje)
-
-        estado_cuenta = data["estadoCuenta"]
-        if not any([estado_cuenta.get("idCredito"), estado_cuenta.get("datosCliente"), estado_cuenta.get("datosCargos"), estado_cuenta.get("datosPagos")]):
-            auditar_estado_cuenta(session['usuario']['username'], id_credito, fecha_corte, 0, "Crédito vacío")
-            return render_template("resultado.html", usuario_no_existe=True)
-
-        auditar_estado_cuenta(session['usuario']['username'], id_credito, fecha_corte, 1, None)
-        tabla = procesar_estado_cuenta(estado_cuenta)
-        return render_template("resultado.html", datos=estado_cuenta, resultado=tabla)
-
-    return render_template("index.html", fecha_actual_iso=fecha_actual_iso)
-
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -216,72 +237,67 @@ def logout():
     session.pop('usuario', None)
     return redirect('/login')
 
-@app.route('/documentos', methods=['GET', 'POST'])
-def documentos():
+@app.route('/', methods=['GET', 'POST'])
+def index():
     if 'usuario' not in session:
         return redirect('/login')
-    return render_template("consulta_documentos.html")
 
-# ------------------ DESCARGA DE DOCUMENTOS ------------------
-@app.route('/descargar/<id>')
-def descargar(id):
-    if 'usuario' not in session:
-        return "No autorizado", 403
+    fecha_actual_iso = datetime.now().strftime("%Y-%m-%d")
 
-    tipo = request.args.get('tipo', 'INE')
-    usuario = session['usuario']['username']
+    if request.method == 'POST':
+        nombre_busqueda = request.form.get('nombre', '').strip()
+        id_credito_form = request.form.get('idCredito', '').strip()
+        fecha_corte = request.form.get('fechaCorte', '').strip() or fecha_actual_iso
 
-    try:
-        if tipo == 'INE':
-            fecha_corte = datetime.now().strftime("%Y-%m-%d")
-            payload = {"idCredito": int(id), "fechaCorte": fecha_corte}
-            headers = {"Token": TOKEN, "Content-Type": "application/json"}
-            res = requests.post(ENDPOINT, json=payload, headers=headers)
-            data = res.json() if res.ok else None
+        try:
+            datetime.strptime(fecha_corte, "%Y-%m-%d")
+        except ValueError:
+            return render_template("index.html", error="Fecha inválida", fecha_actual_iso=fecha_corte)
 
-            if not data or "estadoCuenta" not in data:
-                auditar_documento(usuario, "INE", "INE completo", id, 0, "Crédito no encontrado o sin datosCliente")
-                return "Crédito no encontrado o sin datosCliente", 404
-
-            idCliente = data["estadoCuenta"].get("datosCliente", {}).get("idCliente")
-            if not idCliente:
-                auditar_documento(usuario, "INE", "INE completo", id, 0, "No se encontró idCliente")
-                return "No se encontró idCliente para este crédito", 404
-
-            url_frente = f"http://54.167.121.148:8081/s3/downloadS3File?fileName=INE/{idCliente}_frente.jpeg"
-            url_reverso = f"http://54.167.121.148:8081/s3/downloadS3File?fileName=INE/{idCliente}_reverso.jpeg"
-            r1 = requests.get(url_frente)
-            r2 = requests.get(url_reverso)
-
-            faltantes = []
-            if r1.status_code != 200:
-                faltantes.append("Frente")
-            if r2.status_code != 200:
-                faltantes.append("Reverso")
-            if faltantes:
-                auditar_documento(usuario, "INE", "INE completo", id, 0, f"No se encontraron los archivos: {', '.join(faltantes)}")
-                return f"No se encontraron los archivos: {', '.join(faltantes)}", 404
-
-            img1 = Image.open(BytesIO(r1.content)).convert("RGB")
-            img2 = Image.open(BytesIO(r2.content)).convert("RGB")
-            img1.info['dpi'] = (150, 150)
-            img2.info['dpi'] = (150, 150)
-            pdf_bytes = BytesIO()
-            img1.save(pdf_bytes, format='PDF', save_all=True, append_images=[img2])
-            pdf_bytes.seek(0)
-
-            auditar_documento(usuario, "INE", "INE completo", id, 1, None)
-            return Response(
-                pdf_bytes.read(),
-                mimetype='application/pdf',
-                headers={"Content-Disposition": f"inline; filename={id}_INE.pdf"}
-            )
+        resultados = []
+        if nombre_busqueda:
+            resultados = buscar_credito_por_nombre(nombre_busqueda)
+            if not resultados:
+                return render_template("index.html", error="No se encontraron créditos con ese nombre", fecha_actual_iso=fecha_corte)
+            if len(resultados) > 1:
+                return render_template("index.html", resultados=resultados, fecha_actual_iso=fecha_corte)
+            id_credito = resultados[0]['id_credito']
+        elif id_credito_form:
+            id_credito = int(id_credito_form)
         else:
-            auditar_documento(usuario, tipo, tipo, id, 0, "Tipo de documento no válido")
-            return "Tipo de documento no válido", 400
-    except Exception as e:
-        auditar_documento(usuario, tipo, tipo, id, 0, f"Error interno: {e}")
-        return "Cliente no encontrado en la Base de Datos", 500
+            return render_template("index.html", error="Debes proporcionar nombre o ID de crédito", fecha_actual_iso=fecha_corte)
+
+        # Llamada API externa
+        payload = {"idCredito": int(id_credito), "fechaCorte": fecha_corte}
+        headers = {"Token": TOKEN, "Content-Type": "application/json"}
+        try:
+            res = requests.post(ENDPOINT, json=payload, headers=headers, timeout=15)
+            data = res.json()
+        except Exception:
+            auditar_estado_cuenta(session['usuario']['username'], id_credito, fecha_corte, 0, "Respuesta no válida del servidor")
+            return render_template("resultado.html", error="Respuesta no válida del servidor")
+
+        if res.status_code != 200 or "estadoCuenta" not in data:
+            mensaje = data.get("mensaje", ["Error desconocido"])[0] if data else "No se encontraron datos para este crédito"
+            auditar_estado_cuenta(session['usuario']['username'], id_credito, fecha_corte, 0, mensaje)
+            return render_template("resultado.html", error=mensaje)
+
+        estado_cuenta = data["estadoCuenta"]
+        if (
+            not estado_cuenta.get("idCredito")
+            and not estado_cuenta.get("datosCliente")
+            and not estado_cuenta.get("datosCargos")
+            and not estado_cuenta.get("datosPagos")
+        ):
+            auditar_estado_cuenta(session['usuario']['username'], id_credito, fecha_corte, 0, "Crédito vacío")
+            return render_template("resultado.html", usuario_no_existe=True)
+
+        auditar_estado_cuenta(session['usuario']['username'], id_credito, fecha_corte, 1, None)
+        tabla = procesar_estado_cuenta(estado_cuenta)
+        return render_template("resultado.html", datos=estado_cuenta, resultado=tabla)
+
+    return render_template("index.html", fecha_actual_iso=fecha_actual_iso)
+
 
 # ------------------ INICIO ------------------
 if __name__ == "__main__":
