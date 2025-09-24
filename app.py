@@ -362,14 +362,14 @@ def descargar(id):
                 headers={"Content-Disposition": f"inline; filename={id}_INE.pdf"}
             )
 
-        elif tipo == 'Otro 1':
-            url = f"http://54.167.121.148:8081/s3/downloadS3File?fileName=CEP/{id}_cep.jpeg"
+        elif tipo == 'Factura':
+            url = f"http://54.167.121.148:8081/s3/downloadS3File?fileName=FACTURA/{id}_factura.pdf"
             r = requests.get(url)
             if r.status_code != 200:
-                auditar_documento(usuario, "CEP", "CEP completo", id, 0, "Archivo CEP no encontrado")
+                auditar_documento(usuario, "Factura", "Factura", id, 0, "Archivo Factura no encontrado")
                 return "Archivo CEP no encontrado", 404
 
-            auditar_documento(usuario, "CEP", "CEP completo", id, 1, None)
+            auditar_documento(usuario, "Factura", "Factura completo", id, 1, None)
             return Response(r.content, mimetype='image/jpeg')
 
         elif tipo == 'Contrato':
