@@ -5,12 +5,9 @@
     <title>Consulta de Estado de Cuenta</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        /* Fondo general */
         body {
             background-color: #f8f9fa;
         }
-
-        /* Cabecera */
         .logo {
             max-height: 60px;
         }
@@ -23,21 +20,15 @@
             border-radius: 20px;
             font-weight: 500;
         }
-
-        /* Tarjeta formulario */
         .card {
             border-radius: 16px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.08);
             padding: 2rem;
             background: #fff;
         }
-
-        /* Inputs */
         .form-control {
             border-radius: 10px;
         }
-
-        /* Botón */
         .btn-custom {
             background-color: #0d6efd;
             color: white;
@@ -46,7 +37,6 @@
         .btn-custom:hover {
             background-color: #084298;
         }
-
         h3.section-title {
             margin-top: 2rem;
             color: #495057;
@@ -76,17 +66,43 @@
     <div class="col-md-8">
         <div class="card">
             <h3 class="text-center mb-4">Consulta de Estado de Cuenta</h3>
+            {% if error %}
+                <div class="alert alert-danger">{{ error }}</div>
+            {% endif %}
             <form method="post">
+                <!-- Campo Nombre -->
+                <div class="mb-3">
+                    <label for="nombre" class="form-label">Nombre del Cliente</label>
+                    <input type="text" class="form-control" id="nombre" name="nombre" value="{{ request.form.nombre or '' }}" placeholder="Escribe el nombre del cliente">
+                </div>
+
+                <!-- Campo ID Crédito / Dropdown dinámico -->
+                {% if resultados %}
+                <div class="mb-3">
+                    <label class="form-label">Selecciona el crédito</label>
+                    <select class="form-control" name="idCredito" required>
+                        {% for r in resultados %}
+                        <option value="{{ r.id_credito }}">
+                            {{ r.Nombre_cliente }} - ID: {{ r.id_credito }} - Cliente: {{ r.id_cliente }} - Inicio: {{ r.Fecha_inicio }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                {% else %}
                 <div class="mb-3">
                     <label for="idCredito" class="form-label">ID Crédito</label>
                     <input type="number" class="form-control" id="idCredito" name="idCredito" 
-       min="0" max="999999999" required oninput="this.value = this.value.replace(/[^0-9]/g, '')">
-
+                        min="0" max="999999999" value="{{ request.form.idCredito or '' }}"
+                        oninput="this.value = this.value.replace(/[^0-9]/g, '')">
                 </div>
+                {% endif %}
+
+                <!-- Fecha de Corte Oculta -->
                 <div class="mb-3" style="display: none;">
                     <label for="fechaCorte" class="form-label">Fecha de Corte</label>
-                    <input type="date" class="form-control" id="fechaCorte" name="fechaCorte" required>
+                    <input type="date" class="form-control" id="fechaCorte" name="fechaCorte" required value="{{ fecha_actual_iso }}">
                 </div>
+
                 <button type="submit" class="btn btn-custom w-100">Consultar</button>
             </form>
         </div>
