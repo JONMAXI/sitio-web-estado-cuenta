@@ -268,6 +268,32 @@ def index():
 
     fecha_actual_iso = datetime.now().strftime("%Y-%m-%d")
     return render_template("index.html", fecha_actual_iso=fecha_actual_iso)
+##-------------------------------------------------------------------
+
+
+def buscar_credito_por_nombre(nombre):
+    """
+    Busca créditos por nombre en la base definida en la variable DB_NAME_CLIENTES.
+    Retorna una lista de diccionarios con id_credito y nombre completo.
+    """
+    db_clientes = os.environ.get('DB_NAME_CLIENTES')
+    query = """
+        SELECT id_credito, id_cliente, Nombre_cliente, Fecha_inicio
+        FROM lista_cliente
+        WHERE Nombre_cliente LIKE %s
+        LIMIT 1000
+    """
+    resultados = []
+    with get_connection(db_clientes) as conn:
+        if conn:
+            cursor = conn.cursor(dictionary=True)
+            cursor.execute(query, (f"%{nombre}%",))
+            resultados = cursor.fetchall()
+            cursor.close()
+    return resultados
+
+
+##-------------------------------------------------------------------
 
 # ------------------ PÁGINA DE CONSULTA DOCUMENTOS ------------------
 @app.route('/documentos', methods=['GET', 'POST'])
