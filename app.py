@@ -360,6 +360,20 @@ def descargar(id):
                 mimetype='application/pdf',
                 headers={"Content-Disposition": f"inline; filename={id}_INE.pdf"}
             )
+ 	elif tipo == 'Factura':
+            url = f"http://54.167.121.148:8081/s3/downloadS3File?fileName=CEP/{id}_cep.jpeg"
+            r = requests.get(url)
+            if r.status_code != 200:
+                return "Archivo CEP no encontrado", 404
+            return Response(r.content, mimetype='image/jpeg')
+
+        elif tipo == 'Contrato':
+            url = f"http://54.167.121.148:8081/s3/downloadS3File?fileName=VALIDACIONES/{id}_validaciones.pdf"
+            r = requests.get(url)
+            if r.status_code != 200:
+                return "Cliente no encontrado en la Base de Datos", 404
+            return Response(r.content, mimetype='application/pdf')
+
         else:
             auditar_documento(usuario, tipo, tipo, id, 0, "Tipo de documento no válido")
             return "Tipo de documento no válido", 400
