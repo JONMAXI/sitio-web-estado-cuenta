@@ -58,13 +58,13 @@
                     <div class="form-check form-check-inline">
                         <input class="form-check-input" type="radio" name="modoBusqueda" id="modoNombre" value="nombre" 
                         {% if request.form.modoBusqueda == "nombre" %}checked{% endif %}>
-                        <label class="form-check-label" for="modoNombre">Busca unicamente por el Nombre del Cliente</label>
+                        <label class="form-check-label" for="modoNombre">Nombre del cliente</label>
                     </div>
                 </div>
 
                 <!-- INPUT NOMBRE -->
                 <div class="mb-3" id="divNombre">
-                    <label for="nombre" class="form-label">Nombre del cliente:</label>
+                    <label for="nombre" class="form-label">Busca unicamente por el Nombre del Cliente:</label>
                     <input type="text" class="form-control" name="nombre" id="nombre" value="{{ request.form.nombre or '' }}">
                 </div>
 
