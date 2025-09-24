@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, session, Response, send_file
+from flask import Flask, render_template, request, redirect, session, Response
 import requests
 from datetime import datetime
 import hashlib
@@ -63,40 +63,69 @@ def safe_date(date_str, fmt="%Y-%m-%d %H:%M:%S"):
 
 # ------------------ FUNCIONES DE AUDITORÍA ------------------
 def auditar_estado_cuenta(usuario, id_credito, fecha_corte, exito, mensaje_error=None):
-    """Registra en auditoria_estado_cuenta"""
     try:
-        conn = get_connection()
-        if conn is None:
-            return
-        cur = conn.cursor()
-        cur.execute("""
-            INSERT INTO auditoria_estado_cuenta (usuario, id_credito, fecha_corte, exito, mensaje_error)
-            VALUES (%s, %s, %s, %s, %s)
-        """, (usuario, id_credito, fecha_corte, exito, mensaje_error))
-        conn.commit()
-        cur.close()
-        conn.close()
+        with get_connection() as conn:
+            if not conn:
+                return
+            cur = conn.cursor()
+            cur.execute("""
+                INSERT INTO auditoria_estado_cuenta (usuario, id_credito, fecha_corte, exito, mensaje_error)
+                VALUES (%s, %s, %s, %s, %s)
+            """, (usuario, id_credito, fecha_corte, exito, mensaje_error))
+            conn.commit()
+            cur.close()
     except Exception as e:
         print(f"[AUDITORIA] Error registrando estado de cuenta: {e}")
 
 def auditar_documento(usuario, documento_clave, documento_nombre, id_referencia, exito, mensaje_error=None):
-    """Registra en auditoria_documentos"""
     try:
-        conn = get_connection()
-        if conn is None:
-            return
-        cur = conn.cursor()
-        cur.execute("""
-            INSERT INTO auditoria_documentos (usuario, documento_clave, documento_nombre, id_referencia, exito, mensaje_error)
-            VALUES (%s, %s, %s, %s, %s, %s)
-        """, (usuario, documento_clave, documento_nombre, id_referencia, exito, mensaje_error))
-        conn.commit()
-        cur.close()
-        conn.close()
+        with get_connection() as conn:
+            if not conn:
+                return
+            cur = conn.cursor()
+            cur.execute("""
+                INSERT INTO auditoria_documentos (usuario, documento_clave, documento_nombre, id_referencia, exito, mensaje_error)
+                VALUES (%s, %s, %s, %s, %s, %s)
+            """, (usuario, documento_clave, documento_nombre, id_referencia, exito, mensaje_error))
+            conn.commit()
+            cur.close()
     except Exception as e:
         print(f"[AUDITORIA] Error registrando documento: {e}")
 
-# ------------------ PROCESAR ESTADO DE CUENTA ------------------
+# ------------------ FUNCIONES DE PROCESAMIENTO ------------------
+def procesar_estado_cuenta(estado_cuenta):
+    """
+    Función mínima para procesar estado de cuenta.
+    Retorna los datos tal cual (puedes adaptar luego).
+    """
+    return estado_cuenta
+
+def buscar_credito_por_nombre(nombre):
+    """
+    Busca créditos por nombre en la base definida en la variable DB_NAME_CLIENTES.
+    Retorna una lista de diccionarios con id_credito y nombre completo.
+    """
+    db_clientes = os.environ.get('DB_NAME_CLIENTES')
+    if not db_clientes:
+        print("[DB ERROR] Variable de entorno DB_NAME_CLIENTES no definida")
+        return []
+
+    query = """
+        SELECT id_credito, id_cliente, Nombre_cliente, Fecha_inicio
+        FROM lista_cliente
+        WHERE Nombre_cliente LIKE %s
+        LIMIT 1000
+    """
+    resultados = []
+    with get_connection(db_clientes) as conn:
+        if conn:
+            cursor = conn.cursor(dictionary=True)
+            cursor.execute(query, (f"%{nombre}%",))
+            resultados = cursor.fetchall()
+            cursor.close()
+    return resultados
+
+# ------------------ RUTAS ------------------
 @app.route('/', methods=['GET', 'POST'])
 def index():
     if 'usuario' not in session:
@@ -109,32 +138,26 @@ def index():
         id_credito_form = request.form.get('idCredito', '').strip()
         fecha_corte = request.form.get('fechaCorte', fecha_actual_iso).strip()
 
-        # Validación fecha
         try:
             datetime.strptime(fecha_corte, "%Y-%m-%d")
         except ValueError:
             return render_template("index.html", error="Fecha inválida", fecha_actual_iso=fecha_corte)
 
-        # --- Búsqueda por nombre ---
         resultados = []
         if nombre_busqueda:
             resultados = buscar_credito_por_nombre(nombre_busqueda)
             if not resultados:
                 return render_template("index.html", error="No se encontraron créditos con ese nombre", fecha_actual_iso=fecha_corte)
-            # Si solo hay un resultado, lo tomamos directamente
             if len(resultados) == 1:
                 id_credito = resultados[0]['id_credito']
-            # Si hay varios, mostramos en la plantilla
             else:
                 return render_template("index.html", resultados=resultados, fecha_actual_iso=fecha_corte)
-
-        # --- Usar idCredito si se envió directamente o ya seleccionado ---
         elif id_credito_form:
             id_credito = int(id_credito_form)
         else:
             return render_template("index.html", error="Debes proporcionar nombre o ID de crédito", fecha_actual_iso=fecha_corte)
 
-        # --- Consulta del estado de cuenta ---
+        # Consulta al API externa
         payload = {"idCredito": int(id_credito), "fechaCorte": fecha_corte}
         headers = {"Token": TOKEN, "Content-Type": "application/json"}
         try:
@@ -150,12 +173,7 @@ def index():
             return render_template("resultado.html", error=mensaje)
 
         estado_cuenta = data["estadoCuenta"]
-        if (
-            not estado_cuenta.get("idCredito")
-            and not estado_cuenta.get("datosCliente")
-            and not estado_cuenta.get("datosCargos")
-            and not estado_cuenta.get("datosPagos")
-        ):
+        if not any([estado_cuenta.get("idCredito"), estado_cuenta.get("datosCliente"), estado_cuenta.get("datosCargos"), estado_cuenta.get("datosPagos")]):
             auditar_estado_cuenta(session['usuario']['username'], id_credito, fecha_corte, 0, "Crédito vacío")
             return render_template("resultado.html", usuario_no_existe=True)
 
@@ -163,26 +181,21 @@ def index():
         tabla = procesar_estado_cuenta(estado_cuenta)
         return render_template("resultado.html", datos=estado_cuenta, resultado=tabla)
 
-    # GET → mostrar formulario
     return render_template("index.html", fecha_actual_iso=fecha_actual_iso)
-# ------------------ LOGIN ------------------
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
         username = request.form['username']
         password = hashlib.sha256(request.form['password'].encode()).hexdigest()
         try:
-            conn = get_connection()
-            if conn is None:
-                return "Error de conexión a la base de datos", 500
-            cur = conn.cursor(dictionary=True)
-            cur.execute(
-                "SELECT * FROM usuarios WHERE username = %s AND password = %s",
-                (username, password)
-            )
-            user = cur.fetchone()
-            cur.close()
-            conn.close()
+            with get_connection() as conn:
+                if not conn:
+                    return "Error de conexión a la base de datos", 500
+                cur = conn.cursor(dictionary=True)
+                cur.execute("SELECT * FROM usuarios WHERE username = %s AND password = %s", (username, password))
+                user = cur.fetchone()
+                cur.close()
         except Exception as err:
             return f"Error de conexión a MySQL: {err}"
 
@@ -203,111 +216,13 @@ def logout():
     session.pop('usuario', None)
     return redirect('/login')
 
-# ------------------ CONSULTA ESTADO DE CUENTA ------------------
-@app.route('/', methods=['GET', 'POST'])
-def index():
-    if 'usuario' not in session:
-        return redirect('/login')
-
-    fecha_actual_iso = datetime.now().strftime("%Y-%m-%d")
-
-    if request.method == 'POST':
-        nombre_busqueda = request.form.get('nombre', '').strip()
-        id_credito_form = request.form.get('idCredito', '').strip()
-        fecha_corte = request.form.get('fechaCorte', fecha_actual_iso).strip()
-
-        # Validación fecha
-        try:
-            datetime.strptime(fecha_corte, "%Y-%m-%d")
-        except ValueError:
-            return render_template("index.html", error="Fecha inválida", fecha_actual_iso=fecha_corte)
-
-        # --- Búsqueda por nombre ---
-        resultados = []
-        if nombre_busqueda:
-            resultados = buscar_credito_por_nombre(nombre_busqueda)
-            if not resultados:
-                return render_template("index.html", error="No se encontraron créditos con ese nombre", fecha_actual_iso=fecha_corte)
-            # Si solo hay un resultado, lo tomamos directamente
-            if len(resultados) == 1:
-                id_credito = resultados[0]['id_credito']
-            # Si hay varios, mostramos en la plantilla
-            else:
-                return render_template("index.html", resultados=resultados, fecha_actual_iso=fecha_corte)
-
-        # --- Usar idCredito si se envió directamente o ya seleccionado ---
-        elif id_credito_form:
-            id_credito = int(id_credito_form)
-        else:
-            return render_template("index.html", error="Debes proporcionar nombre o ID de crédito", fecha_actual_iso=fecha_corte)
-
-        # --- Consulta del estado de cuenta ---
-        payload = {"idCredito": int(id_credito), "fechaCorte": fecha_corte}
-        headers = {"Token": TOKEN, "Content-Type": "application/json"}
-        try:
-            res = requests.post(ENDPOINT, json=payload, headers=headers, timeout=15)
-            data = res.json()
-        except Exception:
-            auditar_estado_cuenta(session['usuario']['username'], id_credito, fecha_corte, 0, "Respuesta no válida del servidor")
-            return render_template("resultado.html", error="Respuesta no válida del servidor")
-
-        if res.status_code != 200 or "estadoCuenta" not in data:
-            mensaje = data.get("mensaje", ["Error desconocido"])[0] if data else "No se encontraron datos para este crédito"
-            auditar_estado_cuenta(session['usuario']['username'], id_credito, fecha_corte, 0, mensaje)
-            return render_template("resultado.html", error=mensaje)
-
-        estado_cuenta = data["estadoCuenta"]
-        if (
-            not estado_cuenta.get("idCredito")
-            and not estado_cuenta.get("datosCliente")
-            and not estado_cuenta.get("datosCargos")
-            and not estado_cuenta.get("datosPagos")
-        ):
-            auditar_estado_cuenta(session['usuario']['username'], id_credito, fecha_corte, 0, "Crédito vacío")
-            return render_template("resultado.html", usuario_no_existe=True)
-
-        auditar_estado_cuenta(session['usuario']['username'], id_credito, fecha_corte, 1, None)
-        tabla = procesar_estado_cuenta(estado_cuenta)
-        return render_template("resultado.html", datos=estado_cuenta, resultado=tabla)
-
-    # GET → mostrar formulario
-    return render_template("index.html", fecha_actual_iso=fecha_actual_iso)
-
-##-------------------------------------------------------------------
-
-
-def buscar_credito_por_nombre(nombre):
-    """
-    Busca créditos por nombre en la base definida en la variable DB_NAME_CLIENTES.
-    Retorna una lista de diccionarios con id_credito y nombre completo.
-    """
-    db_clientes = os.environ.get('DB_NAME_CLIENTES')
-    query = """
-        SELECT id_credito, id_cliente, Nombre_cliente, Fecha_inicio
-        FROM lista_cliente
-        WHERE Nombre_cliente LIKE %s
-        LIMIT 1000
-    """
-    resultados = []
-    with get_connection(db_clientes) as conn:
-        if conn:
-            cursor = conn.cursor(dictionary=True)
-            cursor.execute(query, (f"%{nombre}%",))
-            resultados = cursor.fetchall()
-            cursor.close()
-    return resultados
-
-
-##-------------------------------------------------------------------
-
-# ------------------ PÁGINA DE CONSULTA DOCUMENTOS ------------------
 @app.route('/documentos', methods=['GET', 'POST'])
 def documentos():
     if 'usuario' not in session:
         return redirect('/login')
     return render_template("consulta_documentos.html")
 
-# ------------------ DESCARGA / VISUALIZADOR CON AUDITORÍA ------------------
+# ------------------ DESCARGA DE DOCUMENTOS ------------------
 @app.route('/descargar/<id>')
 def descargar(id):
     if 'usuario' not in session:
@@ -347,7 +262,6 @@ def descargar(id):
                 auditar_documento(usuario, "INE", "INE completo", id, 0, f"No se encontraron los archivos: {', '.join(faltantes)}")
                 return f"No se encontraron los archivos: {', '.join(faltantes)}", 404
 
-            # ✅ Descarga exitosa
             img1 = Image.open(BytesIO(r1.content)).convert("RGB")
             img2 = Image.open(BytesIO(r2.content)).convert("RGB")
             img1.info['dpi'] = (150, 150)
@@ -362,31 +276,9 @@ def descargar(id):
                 mimetype='application/pdf',
                 headers={"Content-Disposition": f"inline; filename={id}_INE.pdf"}
             )
-
-        elif tipo == 'Otro 1':
-            url = f"http://54.167.121.148:8081/s3/downloadS3File?fileName=CEP/{id}_cep.jpeg"
-            r = requests.get(url)
-            if r.status_code != 200:
-                auditar_documento(usuario, "CEP", "CEP completo", id, 0, "Archivo CEP no encontrado")
-                return "Archivo CEP no encontrado", 404
-
-            auditar_documento(usuario, "CEP", "CEP completo", id, 1, None)
-            return Response(r.content, mimetype='image/jpeg')
-
-        elif tipo == 'Contrato':
-            url = f"http://54.167.121.148:8081/s3/downloadS3File?fileName=VALIDACIONES/{id}_validaciones.pdf"
-            r = requests.get(url)
-            if r.status_code != 200:
-                auditar_documento(usuario, "Contrato", "Contrato validaciones", id, 0, "Cliente no encontrado en la Base de Datos")
-                return "Cliente no encontrado en la Base de Datos", 404
-
-            auditar_documento(usuario, "Contrato", "Contrato validaciones", id, 1, None)
-            return Response(r.content, mimetype='application/pdf')
-
         else:
             auditar_documento(usuario, tipo, tipo, id, 0, "Tipo de documento no válido")
             return "Tipo de documento no válido", 400
-
     except Exception as e:
         auditar_documento(usuario, tipo, tipo, id, 0, f"Error interno: {e}")
         return "Cliente no encontrado en la Base de Datos", 500
