@@ -298,6 +298,76 @@ def index():
 
     return render_template("index.html", fecha_actual_iso=fecha_actual_iso)
 
+####-----------------------------------------------------------------------------------
+
+@app.route('/documentos', methods=['GET', 'POST'])
+def documentos():
+    if 'usuario' not in session:
+        return redirect('/login')
+    return render_template("consulta_documentos.html")
+
+# ------------------ DESCARGA DE DOCUMENTOS ------------------
+@app.route('/descargar/<id>')
+def descargar(id):
+    if 'usuario' not in session:
+        return "No autorizado", 403
+
+    tipo = request.args.get('tipo', 'INE')
+    usuario = session['usuario']['username']
+
+    try:
+        if tipo == 'INE':
+            fecha_corte = datetime.now().strftime("%Y-%m-%d")
+            payload = {"idCredito": int(id), "fechaCorte": fecha_corte}
+            headers = {"Token": TOKEN, "Content-Type": "application/json"}
+            res = requests.post(ENDPOINT, json=payload, headers=headers)
+            data = res.json() if res.ok else None
+
+            if not data or "estadoCuenta" not in data:
+                auditar_documento(usuario, "INE", "INE completo", id, 0, "Crédito no encontrado o sin datosCliente")
+                return "Crédito no encontrado o sin datosCliente", 404
+
+            idCliente = data["estadoCuenta"].get("datosCliente", {}).get("idCliente")
+            if not idCliente:
+                auditar_documento(usuario, "INE", "INE completo", id, 0, "No se encontró idCliente")
+                return "No se encontró idCliente para este crédito", 404
+
+            url_frente = f"http://54.167.121.148:8081/s3/downloadS3File?fileName=INE/{idCliente}_frente.jpeg"
+            url_reverso = f"http://54.167.121.148:8081/s3/downloadS3File?fileName=INE/{idCliente}_reverso.jpeg"
+            r1 = requests.get(url_frente)
+            r2 = requests.get(url_reverso)
+
+            faltantes = []
+            if r1.status_code != 200:
+                faltantes.append("Frente")
+            if r2.status_code != 200:
+                faltantes.append("Reverso")
+            if faltantes:
+                auditar_documento(usuario, "INE", "INE completo", id, 0, f"No se encontraron los archivos: {', '.join(faltantes)}")
+                return f"No se encontraron los archivos: {', '.join(faltantes)}", 404
+
+            img1 = Image.open(BytesIO(r1.content)).convert("RGB")
+            img2 = Image.open(BytesIO(r2.content)).convert("RGB")
+            img1.info['dpi'] = (150, 150)
+            img2.info['dpi'] = (150, 150)
+            pdf_bytes = BytesIO()
+            img1.save(pdf_bytes, format='PDF', save_all=True, append_images=[img2])
+            pdf_bytes.seek(0)
+
+            auditar_documento(usuario, "INE", "INE completo", id, 1, None)
+            return Response(
+                pdf_bytes.read(),
+                mimetype='application/pdf',
+                headers={"Content-Disposition": f"inline; filename={id}_INE.pdf"}
+            )
+        else:
+            auditar_documento(usuario, tipo, tipo, id, 0, "Tipo de documento no válido")
+            return "Tipo de documento no válido", 400
+    except Exception as e:
+        auditar_documento(usuario, tipo, tipo, id, 0, f"Error interno: {e}")
+        return "Cliente no encontrado en la Base de Datos", 500
+
+
 
 # ------------------ INICIO ------------------
 if __name__ == "__main__":
