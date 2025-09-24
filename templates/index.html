@@ -5,76 +5,16 @@
     <title>Consulta de Estado de Cuenta</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        /* Fondo general */
-        body {
-            background-color: #f8f9fa;
-        }
-
-        /* Cabecera */
-        .logo {
-            max-height: 60px;
-        }
-        .header-bar {
-            background-color: white;
-            padding: 1rem 2rem;
-            box-shadow: 0 0 10px rgba(0,0,0,0.05);
-        }
-        .logout-btn {
-            border-radius: 20px;
-            font-weight: 500;
-        }
-
-        /* Tarjeta formulario */
-        .card {
-            border-radius: 16px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-            padding: 2rem;
-            background: #fff;
-            margin-bottom: 1rem;
-        }
-
-        /* Inputs */
-        .form-control {
-            border-radius: 10px;
-        }
-
-        /* Botón */
-        .btn-custom {
-            background-color: #0d6efd;
-            color: white;
-            font-weight: 500;
-        }
-        .btn-custom:hover {
-            background-color: #084298;
-        }
-
-        h3.section-title {
-            margin-top: 2rem;
-            color: #495057;
-        }
+        body { background-color: #f8f9fa; }
+        .logo { max-height: 60px; }
+        .header-bar { background-color: white; padding: 1rem 2rem; box-shadow: 0 0 10px rgba(0,0,0,0.05); }
+        .logout-btn { border-radius: 20px; font-weight: 500; }
+        .card { border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); padding: 2rem; background: #fff; margin-bottom: 1rem; }
+        .form-control { border-radius: 10px; }
+        .btn-custom { background-color: #0d6efd; color: white; font-weight: 500; }
+        .btn-custom:hover { background-color: #084298; }
+        h3.section-title { margin-top: 2rem; color: #495057; }
     </style>
-    <script>
-        function toggleSearch(mode) {
-            const nombreDiv = document.getElementById('divNombre');
-            const idDiv = document.getElementById('divId');
-
-            if (mode === 'nombre') {
-                nombreDiv.style.display = 'block';
-                idDiv.style.display = 'none';
-                document.getElementById('idCredito').value = "";
-            } else {
-                nombreDiv.style.display = 'none';
-                idDiv.style.display = 'block';
-                document.getElementById('nombre').value = "";
-            }
-        }
-
-        // Ejecutar al cargar para aplicar el estado inicial
-        window.onload = function() {
-            document.getElementById('radioId').checked = true;
-            toggleSearch('id');
-        }
-    </script>
 </head>
 <body>
 
@@ -98,7 +38,7 @@
 <div class="container py-4 d-flex flex-column align-items-center">
     <div class="col-md-8">
 
-        <!-- FORMULARIO DE BÚSQUEDA POR NOMBRE/ID -->
+        <!-- FORMULARIO DE BÚSQUEDA -->
         <div class="card mb-3">
             <h3 class="text-center mb-4">Consulta de Estado de Cuenta</h3>
 
@@ -107,30 +47,33 @@
             {% endif %}
 
             <form method="POST">
-                <!-- Radios para elegir búsqueda -->
-                <div class="mb-3 d-flex justify-content-center">
-                    <div class="form-check me-3">
-                        <input class="form-check-input" type="radio" name="modo" value="nombre" id="radioNombre" onclick="toggleSearch('nombre')">
-                        <label class="form-check-label" for="radioNombre">Buscar por Nombre</label>
+                <!-- Radios -->
+                <div class="mb-3 d-flex gap-3">
+                    <div>
+                        <input type="radio" id="radioCredito" name="modoBusqueda" value="credito"
+                            {% if request.form.idCredito %}checked{% endif %}
+                            {% if not request.form.idCredito and not request.form.nombre %}checked{% endif %}>
+                        <label for="radioCredito">Buscar por ID de crédito</label>
                     </div>
-                    <div class="form-check">
-                        <input class="form-check-input" type="radio" name="modo" value="id" id="radioId" onclick="toggleSearch('id')">
-                        <label class="form-check-label" for="radioId">Buscar por ID Crédito</label>
+                    <div>
+                        <input type="radio" id="radioNombre" name="modoBusqueda" value="nombre"
+                            {% if request.form.nombre %}checked{% endif %}>
+                        <label for="radioNombre">Buscar por nombre</label>
                     </div>
-                </div>
-
-                <!-- Campo Nombre -->
-                <div class="mb-3" id="divNombre" style="display:none;">
-                    <label for="nombre" class="form-label">Nombre del cliente:</label>
-                    <input type="text" class="form-control" name="nombre" id="nombre" value="{{ request.form.nombre or '' }}">
                 </div>
 
                 <!-- Campo ID Crédito -->
-                <div class="mb-3" id="divId">
-                    <label for="idCredito" class="form-label">ID de crédito:</label>
+                <div class="mb-3" id="campoCredito">
+                    <label for="idCredito" class="form-label">ID de crédito</label>
                     <input type="number" class="form-control" id="idCredito" name="idCredito" 
                            value="{{ request.form.idCredito or '' }}"
                            oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+                </div>
+
+                <!-- Campo Nombre -->
+                <div class="mb-3" id="campoNombre">
+                    <label for="nombre" class="form-label">Nombre del cliente</label>
+                    <input type="text" class="form-control" name="nombre" id="nombre" value="{{ request.form.nombre or '' }}">
                 </div>
 
                 <div class="mb-3" style="display:none;">
@@ -142,7 +85,7 @@
             </form>
         </div>
 
-        <!-- FORMULARIO DE SELECCIÓN DE CRÉDITO (SOLO SI HAY RESULTADOS) -->
+        <!-- FORMULARIO DE SELECCIÓN DE CRÉDITO -->
         {% if resultados %}
         <div class="card">
             <h5 class="mb-3">Selecciona un crédito:</h5>
@@ -166,8 +109,22 @@
     </div>
 </div>
 
-<!-- Script para autollenar fecha -->
+<!-- Script -->
 <script>
+    function toggleCampos() {
+        const radioCredito = document.getElementById("radioCredito").checked;
+        document.getElementById("campoCredito").style.display = radioCredito ? "block" : "none";
+        document.getElementById("campoNombre").style.display = radioCredito ? "none" : "block";
+    }
+
+    // Ejecutar al cargar
+    toggleCampos();
+
+    // Cambiar cuando se seleccione un radio
+    document.getElementById("radioCredito").addEventListener("change", toggleCampos);
+    document.getElementById("radioNombre").addEventListener("change", toggleCampos);
+
+    // Autollenar fecha
     const today = new Date();
     const yyyy = today.getFullYear();
     const mm = String(today.getMonth() + 1).padStart(2, '0');
