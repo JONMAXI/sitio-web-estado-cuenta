@@ -55,15 +55,24 @@
     </style>
     <script>
         function toggleSearch(mode) {
+            const nombreDiv = document.getElementById('divNombre');
+            const idDiv = document.getElementById('divId');
+
             if (mode === 'nombre') {
-                document.getElementById('nombre').disabled = false;
-                document.getElementById('idCredito').disabled = true;
+                nombreDiv.style.display = 'block';
+                idDiv.style.display = 'none';
                 document.getElementById('idCredito').value = "";
             } else {
-                document.getElementById('nombre').disabled = true;
+                nombreDiv.style.display = 'none';
+                idDiv.style.display = 'block';
                 document.getElementById('nombre').value = "";
-                document.getElementById('idCredito').disabled = false;
             }
+        }
+
+        // Ejecutar al cargar para aplicar el estado inicial
+        window.onload = function() {
+            document.getElementById('radioId').checked = true;
+            toggleSearch('id');
         }
     </script>
 </head>
@@ -105,19 +114,20 @@
                         <label class="form-check-label" for="radioNombre">Buscar por Nombre</label>
                     </div>
                     <div class="form-check">
-                        <input class="form-check-input" type="radio" name="modo" value="id" id="radioId" checked onclick="toggleSearch('id')">
+                        <input class="form-check-input" type="radio" name="modo" value="id" id="radioId" onclick="toggleSearch('id')">
                         <label class="form-check-label" for="radioId">Buscar por ID Crédito</label>
                     </div>
                 </div>
 
-                <div class="mb-3">
+                <!-- Campo Nombre -->
+                <div class="mb-3" id="divNombre" style="display:none;">
                     <label for="nombre" class="form-label">Nombre del cliente:</label>
-                    <input type="text" class="form-control" name="nombre" id="nombre" 
-                           value="{{ request.form.nombre or '' }}" disabled>
+                    <input type="text" class="form-control" name="nombre" id="nombre" value="{{ request.form.nombre or '' }}">
                 </div>
 
-                <div class="mb-3">
-                    <label for="idCredito" class="form-label">ID de crédito (opcional):</label>
+                <!-- Campo ID Crédito -->
+                <div class="mb-3" id="divId">
+                    <label for="idCredito" class="form-label">ID de crédito:</label>
                     <input type="number" class="form-control" id="idCredito" name="idCredito" 
                            value="{{ request.form.idCredito or '' }}"
                            oninput="this.value = this.value.replace(/[^0-9]/g, '')">
