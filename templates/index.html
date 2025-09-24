@@ -72,7 +72,7 @@
 
                 <!-- Campo Nombre -->
                 <div class="mb-3" id="campoNombre">
-                    <label for="nombre" class="form-label">Nombre del cliente</label>
+                    <label for="nombre" class="form-label">Busca unicamente por el Nombre del Cliente</label>
                     <input type="text" class="form-control" name="nombre" id="nombre" value="{{ request.form.nombre or '' }}">
                 </div>
 
@@ -88,14 +88,14 @@
         <!-- FORMULARIO DE SELECCIÓN DE CRÉDITO -->
         {% if resultados %}
         <div class="card">
-            <h5 class="mb-3">Selecciona un crédito:</h5>
+            <h5 class="mb-3">Resultados de tu busqueda por nombre:</h5>
             <form method="POST">
                 <div class="mb-3">
                     <select class="form-control" name="idCredito" required>
                         <option value="" disabled selected>-- Selecciona un crédito --</option>
                         {% for r in resultados %}
                         <option value="{{ r.id_credito }}">
-                            {{ r.Nombre_cliente }} | Crédito: {{ r.id_credito }} | Inicio: {{ r.Fecha_inicio }}
+                            {{ r.Nombre_cliente }} | Crédito: {{ r.id_credito }}
                         </option>
                         {% endfor %}
                     </select>
