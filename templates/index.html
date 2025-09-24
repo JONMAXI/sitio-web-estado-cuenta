@@ -53,6 +53,19 @@
             color: #495057;
         }
     </style>
+    <script>
+        function toggleSearch(mode) {
+            if (mode === 'nombre') {
+                document.getElementById('nombre').disabled = false;
+                document.getElementById('idCredito').disabled = true;
+                document.getElementById('idCredito').value = "";
+            } else {
+                document.getElementById('nombre').disabled = true;
+                document.getElementById('nombre').value = "";
+                document.getElementById('idCredito').disabled = false;
+            }
+        }
+    </script>
 </head>
 <body>
 
@@ -85,9 +98,22 @@
             {% endif %}
 
             <form method="POST">
+                <!-- Radios para elegir búsqueda -->
+                <div class="mb-3 d-flex justify-content-center">
+                    <div class="form-check me-3">
+                        <input class="form-check-input" type="radio" name="modo" value="nombre" id="radioNombre" onclick="toggleSearch('nombre')">
+                        <label class="form-check-label" for="radioNombre">Buscar por Nombre</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="modo" value="id" id="radioId" checked onclick="toggleSearch('id')">
+                        <label class="form-check-label" for="radioId">Buscar por ID Crédito</label>
+                    </div>
+                </div>
+
                 <div class="mb-3">
                     <label for="nombre" class="form-label">Nombre del cliente:</label>
-                    <input type="text" class="form-control" name="nombre" id="nombre" value="{{ request.form.nombre or '' }}">
+                    <input type="text" class="form-control" name="nombre" id="nombre" 
+                           value="{{ request.form.nombre or '' }}" disabled>
                 </div>
 
                 <div class="mb-3">
