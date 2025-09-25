@@ -33,8 +33,8 @@ body { background-color: #f8f9fa; }
     padding:10px; 
     text-align:center; 
     background:#fff; 
-    min-height: 800px;      /* más grande desde el inicio */
-    max-height: none;       /* sin límite para zoom */
+    min-height: 800px; 
+    max-height: none; 
     overflow-y: auto; 
 }
 
@@ -179,13 +179,12 @@ function drawWatermark(ctx, width, height, text = "SIN VALOR") {
 async function renderPdf(blob) {
     currentPdf = await pdfjsLib.getDocument({ data: await blob.arrayBuffer() }).promise;
     container.innerHTML = '';
-    const containerWidth = container.clientWidth - 20;
 
     for (let num = 1; num <= currentPdf.numPages; num++) {
         const page = await currentPdf.getPage(num);
-        let viewport = page.getViewport({ scale: scale }); 
+        const viewport = page.getViewport({ scale: scale });
 
-        const ratio = window.devicePixelRatio || 2; // full HD
+        const ratio = window.devicePixelRatio || 2; // Full HD
         const canvas = document.createElement('canvas');
         canvas.width = viewport.width * ratio;
         canvas.height = viewport.height * ratio;
@@ -218,10 +217,16 @@ function renderImageWithWatermark(blob) {
 }
 
 document.getElementById('zoomIn').onclick = () => { 
-    if(currentBlob){ scale *= 1.2; renderPdf(currentBlob); } 
+    if(currentBlob){ 
+        scale *= 1.2;
+        renderPdf(currentBlob); 
+    } 
 };
 document.getElementById('zoomOut').onclick = () => { 
-    if(currentBlob){ scale /= 1.2; renderPdf(currentBlob); } 
+    if(currentBlob){ 
+        scale /= 1.2;
+        renderPdf(currentBlob); 
+    } 
 };
 
 document.getElementById('formConsulta').addEventListener('submit', async function(e){
@@ -243,7 +248,7 @@ document.getElementById('formConsulta').addEventListener('submit', async functio
         currentBlob = blob;
 
         if (tipo === 'INE') {
-            scale = 1.0; 
+            scale = 1.0;
             await renderPdf(blob);
         } else if (tipo === 'Contrato') {
             scale = 3.0; // resolución máxima para Contrato
