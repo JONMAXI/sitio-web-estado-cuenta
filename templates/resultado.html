@@ -84,6 +84,36 @@
           </table>
         </div>
 
+<!-- Datos de Referencias -->
+<h5 class="section-title mt-4">Referencias</h5>
+<table class="table table-bordered table-striped text-center align-middle">
+  <thead class="table-light">
+    <tr>
+      <th>#</th>
+      <th>Nombre</th>
+      <th>Teléfono</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>1</td>
+      <td>{{ datos.datosReferencias.nombre_completo_referencia1 or 'N/A' }}</td>
+      <td>{{ datos.datosReferencias.telefono_referencia1 or 'N/A' }}</td>
+    </tr>
+    <tr>
+      <td>2</td>
+      <td>{{ datos.datosReferencias.nombre_completo_referencia2 or 'N/A' }}</td>
+      <td>{{ datos.datosReferencias.telefono_referencia2 or 'N/A' }}</td>
+    </tr>
+    <tr>
+      <td>3</td>
+      <td>{{ datos.datosReferencias.nombre_referencia_3 or 'N/A' }}</td>
+      <td>{{ datos.datosReferencias.telefono_referencia_3 or 'N/A' }}</td>
+    </tr>
+  </tbody>
+</table>
+
+
         <!-- Datos del cliente -->
         <h5 class="section-title">Datos del Cliente</h5>
         <table class="table table-bordered table-striped text-center align-middle">
