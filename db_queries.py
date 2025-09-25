@@ -2,7 +2,7 @@
 import os
 from db import get_connection
 
-DB3_NAME = os.getenv("DB_NAME3")  # tu conexión DB3
+DB3_NAME = os.getenv("DB3_NAME")  # Nombre de la base de datos DB3 en RDS
 
 def buscar_credito_por_nombre(nombre):
     """
@@ -18,8 +18,9 @@ def buscar_credito_por_nombre(nombre):
     WHERE CONCAT(p.primer_nombre, ' ', p.apellido_paterno, ' ', p.apellido_materno) LIKE %s
     LIMIT 50
     """
-    with get_connection(database=DB3_NAME) as conn:
+    with get_connection(database=DB3_NAME, use_rds=True) as conn:
         if not conn:
+            print("[DEBUG] No se pudo conectar a la base de datos DB3")
             return []
         cursor = conn.cursor(dictionary=True)
         cursor.execute(sql, (f"%{nombre}%",))
@@ -56,17 +57,20 @@ def obtener_datos_cliente(id_credito):
     LEFT JOIN persona_adicionales p2 ON p2.fk_persona = p.id_persona
     WHERE o.id_oferta = %s
     """
-    with get_connection(database=DB3_NAME) as conn:
+    with get_connection(database=DB3_NAME, use_rds=True) as conn:
         if not conn:
+            print(f"[DEBUG] No se pudo conectar a DB3 para id_credito={id_credito}")
             return None
         cursor = conn.cursor(dictionary=True)
         cursor.execute(sql, (id_credito,))
         row = cursor.fetchone()
         cursor.close()
+
         if not row:
+            print(f"[DEBUG] No se encontró registro para id_credito={id_credito}")
             return None
 
-        # Garantiza que siempre existan las claves, aunque vengan vacías
+        # Garantiza siempre 3 referencias aunque estén vacías
         for key in [
             "nombre_completo_referencia1", "telefono_referencia1",
             "nombre_completo_referencia2", "telefono_referencia2",
