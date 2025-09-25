@@ -9,7 +9,7 @@ ENV PORT=8080
 
 WORKDIR /app
 
-# Instalamos dependencias
+# Copiamos requirements y las instalamos
 COPY requirements.txt .
 RUN pip install --prefix=/install --no-cache-dir -r requirements.txt
 
@@ -29,5 +29,5 @@ WORKDIR /app
 COPY --from=builder /install /usr/local
 COPY --from=builder /app /app
 
-# Comando de inicio
+# Comando de inicio (distroless no tiene shell)
 CMD ["app.py"]
