@@ -92,10 +92,6 @@ def auditar_documento(usuario, documento_clave, documento_nombre, id_referencia,
     except Exception as e:
         print(f"[AUDITORIA] Error registrando documento: {e}")
 
-#----------------------------------------------------------------
-
-
-
 # ------------------ PROCESAR ESTADO DE CUENTA ------------------
 def procesar_estado_cuenta(estado_cuenta):
     try:
