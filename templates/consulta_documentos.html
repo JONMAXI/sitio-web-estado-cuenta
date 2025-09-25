@@ -149,7 +149,6 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs
 
 const container = document.getElementById('pdfContainer');
 let scale = 1.0;
-let currentPdf = null;
 let currentBlob = null;
 
 function drawWatermark(ctx, width, height, text = "SIN VALOR") {
@@ -177,25 +176,29 @@ function drawWatermark(ctx, width, height, text = "SIN VALOR") {
 }
 
 async function renderPdf(blob) {
-    currentPdf = await pdfjsLib.getDocument({ data: await blob.arrayBuffer() }).promise;
+    const pdf = await pdfjsLib.getDocument({ data: await blob.arrayBuffer() }).promise;
     container.innerHTML = '';
 
-    for (let num = 1; num <= currentPdf.numPages; num++) {
-        const page = await currentPdf.getPage(num);
+    for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+
+        // viewport con scale para zoom
         const viewport = page.getViewport({ scale: scale });
 
-        const ratio = window.devicePixelRatio || 2; // Full HD
         const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        const ratio = window.devicePixelRatio || 2; // alta resolución
+
         canvas.width = viewport.width * ratio;
         canvas.height = viewport.height * ratio;
         canvas.style.width = viewport.width + 'px';
         canvas.style.height = viewport.height + 'px';
 
-        const ctx = canvas.getContext('2d');
         ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
 
         await page.render({ canvasContext: ctx, viewport: viewport }).promise;
         drawWatermark(ctx, canvas.width, canvas.height);
+
         container.appendChild(canvas);
     }
 }
@@ -251,7 +254,7 @@ document.getElementById('formConsulta').addEventListener('submit', async functio
             scale = 1.0;
             await renderPdf(blob);
         } else if (tipo === 'Contrato') {
-            scale = 3.0; // resolución máxima para Contrato
+            scale = 3.0; // máxima resolución para Contrato
             await renderPdf(blob);
         } else {
             renderImageWithWatermark(blob);
@@ -266,3 +269,4 @@ document.getElementById('formConsulta').addEventListener('submit', async functio
 </script>
 </body>
 </html>
+
