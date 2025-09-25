@@ -237,6 +237,7 @@ def logout():
     session.pop('usuario', None)
     return redirect('/login')
 
+
 @app.route('/', methods=['GET', 'POST'])
 def index():
     if 'usuario' not in session:
@@ -249,6 +250,7 @@ def index():
         id_credito_form = request.form.get('idCredito', '').strip()
         fecha_corte = request.form.get('fechaCorte', '').strip() or fecha_actual_iso
 
+        # Validación de fecha
         try:
             datetime.strptime(fecha_corte, "%Y-%m-%d")
         except ValueError:
@@ -256,7 +258,7 @@ def index():
 
         resultados = []
         if nombre_busqueda:
-            resultados = buscar_credito_por_nombre(nombre_busqueda)
+            resultados = buscar_credito_por_nombre(nombre_busqueda)  # tu método existente
             if not resultados:
                 return render_template("index.html", error="No se encontraron créditos con ese nombre", fecha_actual_iso=fecha_corte)
             if len(resultados) > 1:
@@ -267,7 +269,7 @@ def index():
         else:
             return render_template("index.html", error="Debes proporcionar nombre o ID de crédito", fecha_actual_iso=fecha_corte)
 
-        # Llamada API externa
+        # --- Llamada API externa ---
         payload = {"idCredito": int(id_credito), "fechaCorte": fecha_corte}
         headers = {"Token": TOKEN, "Content-Type": "application/json"}
         try:
@@ -292,44 +294,27 @@ def index():
             auditar_estado_cuenta(session['usuario']['username'], id_credito, fecha_corte, 0, "Crédito vacío")
             return render_template("resultado.html", usuario_no_existe=True)
 
+        # --- Auditar éxito ---
         auditar_estado_cuenta(session['usuario']['username'], id_credito, fecha_corte, 1, None)
+
+        # --- Procesar tabla de estado de cuenta ---
         tabla = procesar_estado_cuenta(estado_cuenta)
-        return render_template("resultado.html", datos=estado_cuenta, resultado=tabla)
 
+        # --- Consulta a DB3 para obtener datos del cliente y referencias ---
+        datos_cliente = obtener_datos_cliente(id_credito)
+
+        # --- Renderizar resultado con tabla y datos del cliente ---
+        return render_template(
+            "resultado.html",
+            datos=estado_cuenta,
+            resultado=tabla,
+            cliente=datos_cliente
+        )
+
+    # GET
     return render_template("index.html", fecha_actual_iso=fecha_actual_iso)
-
 ###-----------------------------------------------------------------------------------
-# db_queries.py
-from db import get_connection
 
-def obtener_datos_cliente(id_oferta: int):
-    """
-    Obtiene información del cliente y sus referencias desde la DB3
-    usando el id_oferta (que corresponde al id_credito).
-    """
-    query = """
-        SELECT 
-            o.id_oferta, 
-            CONCAT(p.primer_nombre, ' ', p.apellido_paterno, ' ', p.apellido_materno) AS nombre_completo,
-            CONCAT(p2.nombre_referencia1, ' ', p2.apellido_paterno_referencia1, ' ', p2.apellido_materno_referencia1) AS nombre_completo_referencia1,
-            p2.telefono_referencia1,
-            CONCAT(p2.nombre_referencia2, ' ', p2.apellido_paterno_referencia2, ' ', p2.apellido_materno_referencia2) AS nombre_completo_referencia2,
-            p2.telefono_referencia2, 
-            '' as nombre_referencia_3, 
-            '' as telefono_referencia_3
-        FROM oferta o
-        INNER JOIN persona p ON o.fk_persona = p.id_persona
-        LEFT JOIN persona_adicionales p2 ON p2.fk_persona = p.id_persona
-        WHERE o.id_oferta = %s
-    """
-    with get_connection(database="maxi-prod") as conn:  # DB3
-        if not conn:
-            return None
-        cursor = conn.cursor(dictionary=True)
-        cursor.execute(query, (id_oferta,))
-        row = cursor.fetchone()
-        cursor.close()
-        return row
 
 ####-----------------------------------------------------------------------------------
 
