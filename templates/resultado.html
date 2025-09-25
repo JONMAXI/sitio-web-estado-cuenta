@@ -134,56 +134,61 @@
     </tbody>
 </table>
 
-          <!-- Datos del Cliente -->
+<!-- Sección: Datos del Cliente -->
 <h5 class="section-title">Datos del Cliente</h5>
 <div class="table-responsive">
     <table class="table table-bordered table-striped text-center align-middle">
         <thead class="table-dark">
             <tr>
-                <th>Campo</th>
-                <th>Valor</th>
+                <th style="width: 250px;">Nombre</th>
+                <th>RFC</th>
+		<th>Celular</th>
             </tr>
         </thead>
         <tbody>
             <tr>
-                <td>Nombre</td>
-                <td><i class="fa-solid fa-user me-2"></i> {{ datos.datosCliente.nombreCliente }}</td>
+                <td style="width: 250px;"><i class="fa-solid fa-user me-2"></i> {{ datos.datosCliente.nombreCliente }}</td>
+                <td>{{ datos.datosCliente.rfc }}</td>
+                <td>{{ datos.datosCliente.celular }}</td>
             </tr>
+        </tbody>
+    </table>
+</div>
+
+
+<!-- Sección: Datos de Saldos -->
+<h5 class="section-title">Datos de Saldos</h5>
+<div class="table-responsive">
+    <table class="table table-bordered table-striped text-center align-middle">
+        <thead class="table-dark">
             <tr>
-                <td>RFC</td>
-                <td><i class="fa-solid fa-user me-2"></i> {{ datos.datosCliente.rfc }}</td>
+                <th>Días Mora Máximo</th>
+                <th>Días Mora</th>
+                <th>Cuotas Contratadas</th>
+                <th>Cuotas Pagadas</th>
+                <th>Saldo Para Liquidar</th>
+                <th>Saldo Total Vencido</th>
+                <th>Último Pago Completo</th>
             </tr>
+        </thead>
+        <tbody>
             <tr>
-                <td>Días Mora Máximo</td>
                 <td><strong>{{ datos.datosSaldos.diasMoraMaximo }}</strong></td>
-            </tr>
-            <tr>
-                <td>Días Mora</td>
                 <td><strong>{{ datos.datosSaldos.diasMora }}</strong></td>
-            </tr>
-            <tr>
-                <td>Cuotas Contratadas</td>
                 <td><strong>{{ datos.datosSaldos.cuotasContratadas }} cuotas</strong></td>
-            </tr>
-            <tr>
-                <td>Cuotas Pagadas</td>
                 <td><strong>{{ datos.datosSaldos.cuotasPagadas }} cuotas</strong></td>
-            </tr>
-            <tr>
-                <td>Saldo Para Liquidar</td>
                 <td><strong>${{ "{:,.2f}".format(datos.datosSaldos.saldoParaLiquidarV2) }}</strong></td>
-            </tr>
-            <tr>
-                <td>Saldo Total Vencido</td>
                 <td><strong>${{ "{:,.2f}".format(datos.datosSaldos.saldoTotalVencido) }}</strong></td>
-            </tr>
-            <tr>
-                <td>Último Pago Completo</td>
                 <td id="ultimo-pago-completo"><strong>N/A</strong></td>
             </tr>
         </tbody>
     </table>
 </div>
+
+
+
+
+
 
             <!-- Tabla de pagos -->
             <h5 class="section-title">Pagos</h5>
