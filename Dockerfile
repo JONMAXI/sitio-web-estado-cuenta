@@ -1,23 +1,30 @@
-FROM gcr.io/distroless/python3:3.11
-WORKDIR /app
-
-# Copiamos dependencias y código
-COPY requirements.txt .
-COPY . .
-
-# Instalación de dependencias (con pip, usando un builder temporal)
-# Si quieres mantener pip, usamos multi-stage build:
-
-# Etapa builder
+# ----------------------------
+# Etapa builder: instalar dependencias
+# ----------------------------
 FROM python:3.11-slim-bullseye AS builder
+
+ENV PYTHONUNBUFFERED=1
+ENV PORT=8080
+
 WORKDIR /app
+
 COPY requirements.txt .
 RUN pip install --prefix=/install --no-cache-dir -r requirements.txt
 
-# Etapa final distroless
-FROM gcr.io/distroless/python3:3.11
-WORKDIR /app
-COPY --from=builder /install /usr/local
 COPY . .
 
+# ----------------------------
+# Etapa final: contenedor distroless para producción
+# ----------------------------
+FROM gcr.io/distroless/python3:python3.11
+
+# Puerto para Cloud Run
+ENV PORT=8080
+WORKDIR /app
+
+# Copiamos dependencias y código
+COPY --from=builder /install /usr/local
+COPY --from=builder /app /app
+
+# Comando de inicio
 CMD ["app.py"]
