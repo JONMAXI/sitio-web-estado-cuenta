@@ -1,22 +1,23 @@
-# Usamos una imagen oficial de Python que evita problemas de pull de Docker Hub
-FROM python:3.11-slim-bullseye
-
-# Variables de entorno
-ENV PYTHONUNBUFFERED=1
-ENV PORT=8080
-
-# Directorio de trabajo
+FROM gcr.io/distroless/python3:3.11
 WORKDIR /app
 
-# Copiamos y instalamos dependencias
+# Copiamos dependencias y código
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Copiamos el resto del código
 COPY . .
 
-# Exponemos el puerto
-EXPOSE 8080
+# Instalación de dependencias (con pip, usando un builder temporal)
+# Si quieres mantener pip, usamos multi-stage build:
 
-# Comando por defecto
-CMD ["python", "app.py"]
+# Etapa builder
+FROM python:3.11-slim-bullseye AS builder
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install --prefix=/install --no-cache-dir -r requirements.txt
+
+# Etapa final distroless
+FROM gcr.io/distroless/python3:3.11
+WORKDIR /app
+COPY --from=builder /install /usr/local
+COPY . .
+
+CMD ["app.py"]
