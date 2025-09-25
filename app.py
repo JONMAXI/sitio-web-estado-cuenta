@@ -231,12 +231,12 @@ def login():
         else:
             return render_template("login.html", error="Credenciales inválidas")
     return render_template("login.html")
-#-----------------------------------------------------------------------------------
+
 @app.route('/logout')
 def logout():
     session.pop('usuario', None)
     return redirect('/login')
-#-----------------------------------------------------------------------------------
+
 @app.route('/', methods=['GET', 'POST'])
 def index():
     if 'usuario' not in session:
@@ -291,16 +291,6 @@ def index():
         ):
             auditar_estado_cuenta(session['usuario']['username'], id_credito, fecha_corte, 0, "Crédito vacío")
             return render_template("resultado.html", usuario_no_existe=True)
-
-        # -------------------- NUEVO: Traer datos de referencias --------------------
-        from db_queries import obtener_datos_cliente  # si no lo importaste al inicio
-
-        datos_referencias = obtener_datos_cliente(id_credito)
-        if datos_referencias:
-            estado_cuenta["datosReferencias"] = datos_referencias
-        else:
-            estado_cuenta["datosReferencias"] = {}
-        # ----------------------------------------------------------------------
 
         auditar_estado_cuenta(session['usuario']['username'], id_credito, fecha_corte, 1, None)
         tabla = procesar_estado_cuenta(estado_cuenta)
@@ -379,7 +369,7 @@ def descargar(id):
                 auditar_documento(usuario, "Factura", "Factura", id, 0, "Archivo Factura no encontrado")
                 return "Archivo CEP no encontrado", 404
 
-            auditar_documento(usuario, "Factura", "Factura completo", id, 1, None)
+            auditar_documento(usuario, "Factura", " completo", id, 1, None)
             return Response(r.content, mimetype='image/jpeg')
 
         elif tipo == 'Contrato':
