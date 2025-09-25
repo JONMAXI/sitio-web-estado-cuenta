@@ -94,35 +94,43 @@ def auditar_documento(usuario, documento_clave, documento_nombre, id_referencia,
         print(f"[AUDITORIA] Error registrando documento: {e}")
 
 # ------------------ PROCESAR ESTADO DE CUENTA ------------------
+# ------------------ PROCESAR ESTADO DE CUENTA ------------------
 def procesar_estado_cuenta(estado_cuenta):
     try:
+        # Obtenemos cargos y pagos del estado de cuenta
         cargos = estado_cuenta.get("datosCargos") or []
         if not isinstance(cargos, list):
             cargos = []
+
         pagos = estado_cuenta.get("datosPagos") or []
         if not isinstance(pagos, list):
             pagos = []
 
         pagos_list = []
+
+        # ------------------ PREPARAR PAGOS ------------------
         for p in pagos:
             monto_pago = safe_float(p.get("montoPago"), 0.0)
+            extemporaneos = safe_float(p.get("extemporaneos"), 0.0)
+            monto_real = max(monto_pago - extemporaneos, 0.0)
             cuotas = _parse_cuotas_field(p.get("numeroCuotaSemanal"))
+
             pagos_list.append({
                 "idPago": p.get("idPago"),
-                "remaining": monto_pago,
+                "remaining": monto_real,
                 "cuotas": cuotas,
                 "fechaValor": p.get("fechaValor"),
                 "fechaRegistro": p.get("fechaRegistro"),
-                "montoPagoOriginal": monto_pago
+                "montoPagoOriginal": monto_pago,
+                "extemporaneos": extemporaneos,
+                "_extemporaneo_aplicado": False  # marcador para evitar duplicados
             })
 
+        # ------------------ ORDENAR CARGOS ------------------
         cargos_sorted = sorted(cargos, key=lambda c: safe_int(c.get("idCargo"), 0))
-        pagos_por_cuota_index = {}
-        for pago in pagos_list:
-            for cnum in pago["cuotas"]:
-                pagos_por_cuota_index.setdefault(cnum, []).append(pago)
-
         tabla = []
+
+        # ------------------ PROCESAR CADA CARGO ------------------
         for cargo in cargos_sorted:
             concepto = cargo.get("concepto", "")
             cuota_num = _extraer_numero_cuota(concepto)
@@ -132,32 +140,44 @@ def procesar_estado_cuenta(estado_cuenta):
             monto_cargo = safe_float(cargo.get("monto"))
             capital = safe_float(cargo.get("capital"))
             interes = safe_float(cargo.get("interes"))
-            seguro_total = sum(safe_float(cargo.get(k)) for k in ["seguroBienes","seguroVida","seguroDesempleo"])
+            seguro_total = sum(safe_float(cargo.get(k)) for k in ["seguroBienes", "seguroVida", "seguroDesempleo"])
             fecha_venc = cargo.get("fechaVencimiento")
 
             monto_restante_cargo = monto_cargo
             aplicados = []
 
-            pagos_relacionados = pagos_por_cuota_index.get(cuota_num, [])
-            pagos_relacionados_sorted = sorted(
-                pagos_relacionados,
-                key=lambda p: safe_date(p.get("fechaRegistro")) or datetime.min
-            )
-
-            for pago in pagos_relacionados_sorted:
-                if monto_restante_cargo <= 0 or pago["remaining"] <= 0:
+            # ------------------ APLICAR PAGOS A LA CUOTA ------------------
+            for pago in pagos_list:
+                if cuota_num not in pago["cuotas"]:
                     continue
-                aplicar = min(pago["remaining"], monto_restante_cargo)
-                aplicados.append({
-                    "idPago": pago.get("idPago"),
-                    "montoPago": round(pago["remaining"], 2),
-                    "aplicado": round(aplicar, 2),
-                    "fechaRegistro": pago.get("fechaRegistro"),
-                    "fechaPago": fecha_venc,
-                    "diasMora": None
-                })
-                pago["remaining"] = max(round(pago["remaining"] - aplicar, 2), 0)
-                monto_restante_cargo = max(round(monto_restante_cargo - aplicar, 2), 0)
+
+                # Aplicar monto real del pago
+                if monto_restante_cargo > 0 and pago["remaining"] > 0:
+                    aplicar = min(pago["remaining"], monto_restante_cargo)
+                    aplicados.append({
+                        "idPago": pago.get("idPago"),
+                        "montoPago": round(pago["remaining"], 2),
+                        "aplicado": round(aplicar, 2),
+                        "fechaRegistro": pago.get("fechaRegistro"),
+                        "fechaPago": fecha_venc,
+                        "diasMora": None,
+                        "extemporaneos": 0.0
+                    })
+                    pago["remaining"] = max(round(pago["remaining"] - aplicar, 2), 0)
+                    monto_restante_cargo = max(round(monto_restante_cargo - aplicar, 2), 0)
+
+                # Registrar extemporáneos solo una vez por pago
+                if pago.get("extemporaneos", 0.0) > 0 and not pago["_extemporaneo_aplicado"]:
+                    aplicados.append({
+                        "idPago": pago.get("idPago"),
+                        "montoPago": round(pago["extemporaneos"], 2),
+                        "aplicado": round(pago["extemporaneos"], 2),
+                        "fechaRegistro": pago.get("fechaRegistro"),
+                        "fechaPago": fecha_venc,
+                        "diasMora": None,
+                        "extemporaneos": pago.get("extemporaneos", 0.0)
+                    })
+                    pago["_extemporaneo_aplicado"] = True  # marcamos como aplicado
 
             total_aplicado = round(monto_cargo - monto_restante_cargo, 2)
             pendiente = round(max(monto_cargo - total_aplicado, 0.0), 2)
@@ -177,10 +197,12 @@ def procesar_estado_cuenta(estado_cuenta):
                 "raw_cargo": cargo
             })
 
-        return sorted(tabla, key=lambda x: safe_int(x["cuota"]))
+        return tabla
+
     except Exception as e:
         print(f"[ERROR] procesar_estado_cuenta: {e}")
         return []
+
 
 # ------------------ BÚSQUEDA DE CRÉDITO ------------------
 def buscar_credito_por_nombre(nombre):
