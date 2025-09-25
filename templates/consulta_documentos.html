@@ -147,7 +147,7 @@ const pdfjsLib = window['pdfjs-dist/build/pdf'];
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
 
 const container = document.getElementById('pdfContainer');
-let scale = 1.0;
+let scale = 2.0; // Escala inicial alta para máxima resolución
 let currentPdf = null;
 let currentBlob = null;
 
@@ -178,25 +178,26 @@ function drawWatermark(ctx, width, height, text = "SIN VALOR") {
 async function renderPdf(blob) {
     currentPdf = await pdfjsLib.getDocument({ data: await blob.arrayBuffer() }).promise;
     container.innerHTML = '';
-    const containerWidth = container.clientWidth - 20;
 
     for (let num = 1; num <= currentPdf.numPages; num++) {
         const page = await currentPdf.getPage(num);
-        let viewport = page.getViewport({ scale: 1 }); 
-        let scaleFit = Math.min(scale, containerWidth / viewport.width);
-        viewport = page.getViewport({ scale: scaleFit });
 
+        // Viewport con escala alta
+        let viewport = page.getViewport({ scale: scale });
+
+        // Ajuste para pantallas retina / 4K
         const ratio = window.devicePixelRatio || 1;
         const canvas = document.createElement('canvas');
         canvas.width = viewport.width * ratio;
         canvas.height = viewport.height * ratio;
-        canvas.style.width = '100%';
-        canvas.style.height = 'auto';
+        canvas.style.width = viewport.width + "px";
+        canvas.style.height = viewport.height + "px";
 
         const ctx = canvas.getContext('2d');
         ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
 
         await page.render({ canvasContext: ctx, viewport: viewport }).promise;
+
         drawWatermark(ctx, canvas.width, canvas.height);
         container.appendChild(canvas);
     }
@@ -233,7 +234,6 @@ document.getElementById('formConsulta').addEventListener('submit', async functio
 
     const url = `/descargar/${id}?tipo=${tipo}`;
 
-    // Mostrar loader
     document.getElementById('loader').style.display = 'flex';
     document.getElementById('visorContainer').style.display = 'block';
     container.innerHTML = '';
@@ -245,7 +245,7 @@ document.getElementById('formConsulta').addEventListener('submit', async functio
         currentBlob = blob;
 
         if (tipo === 'INE' || tipo === 'Contrato') {
-            scale = 1.0;
+            scale = 2.0;
             await renderPdf(blob);
         } else {
             renderImageWithWatermark(blob);
