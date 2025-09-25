@@ -134,48 +134,56 @@
     </tbody>
 </table>
 
-            <!-- Datos del cliente -->
-            <h5 class="section-title">Datos del Cliente</h5>
-            <table class="table table-bordered table-striped text-center align-middle">
-                <tbody>
-                    <tr>
-                        <th>Nombre</th>
-                        <td><i class="fa-solid fa-user me-2"></i> {{ datos.datosCliente.nombreCliente }}</td>
-                    </tr>
-                    <tr>
-                        <th>RFC</th>
-                        <td><i class="fa-solid fa-user me-2"></i> {{ datos.datosCliente.rfc }}</td>
-                    </tr>
-                    <tr>
-                        <th>Días Mora Máximo</th>
-                        <td><strong>{{ datos.datosSaldos.diasMoraMaximo }}</strong></td>
-                    </tr>
-                    <tr>
-                        <th>Días Mora</th>
-                        <td><strong>{{ datos.datosSaldos.diasMora }}</strong></td>
-                    </tr>
-                    <tr>
-                        <th>Cuotas Contratadas</th>
-                        <td><strong>{{ datos.datosSaldos.cuotasContratadas }} cuotas</strong></td>
-                    </tr>
-                    <tr>
-                        <th>Cuotas Pagadas</th>
-                        <td><strong>{{ datos.datosSaldos.cuotasPagadas }} cuotas</strong></td>
-                    </tr>
-                    <tr>
-                        <th>Saldo Para Liquidar</th>
-                        <td><strong>${{ "{:,.2f}".format(datos.datosSaldos.saldoParaLiquidarV2) }}</strong></td>
-                    </tr>
-                    <tr>
-                        <th>Saldo Total Vencido</th>
-                        <td><strong>${{ "{:,.2f}".format(datos.datosSaldos.saldoTotalVencido) }}</strong></td>
-                    </tr>
-                    <tr>
-                        <th>Último Pago Completo</th>
-                        <td id="ultimo-pago-completo"><strong>N/A</strong></td>
-                    </tr>
-                </tbody>
-            </table>
+          <!-- Datos del Cliente -->
+<h5 class="section-title">Datos del Cliente</h5>
+<div class="table-responsive">
+    <table class="table table-bordered table-striped text-center align-middle">
+        <thead class="table-dark">
+            <tr>
+                <th>Campo</th>
+                <th>Valor</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Nombre</td>
+                <td><i class="fa-solid fa-user me-2"></i> {{ datos.datosCliente.nombreCliente }}</td>
+            </tr>
+            <tr>
+                <td>RFC</td>
+                <td><i class="fa-solid fa-user me-2"></i> {{ datos.datosCliente.rfc }}</td>
+            </tr>
+            <tr>
+                <td>Días Mora Máximo</td>
+                <td><strong>{{ datos.datosSaldos.diasMoraMaximo }}</strong></td>
+            </tr>
+            <tr>
+                <td>Días Mora</td>
+                <td><strong>{{ datos.datosSaldos.diasMora }}</strong></td>
+            </tr>
+            <tr>
+                <td>Cuotas Contratadas</td>
+                <td><strong>{{ datos.datosSaldos.cuotasContratadas }} cuotas</strong></td>
+            </tr>
+            <tr>
+                <td>Cuotas Pagadas</td>
+                <td><strong>{{ datos.datosSaldos.cuotasPagadas }} cuotas</strong></td>
+            </tr>
+            <tr>
+                <td>Saldo Para Liquidar</td>
+                <td><strong>${{ "{:,.2f}".format(datos.datosSaldos.saldoParaLiquidarV2) }}</strong></td>
+            </tr>
+            <tr>
+                <td>Saldo Total Vencido</td>
+                <td><strong>${{ "{:,.2f}".format(datos.datosSaldos.saldoTotalVencido) }}</strong></td>
+            </tr>
+            <tr>
+                <td>Último Pago Completo</td>
+                <td id="ultimo-pago-completo"><strong>N/A</strong></td>
+            </tr>
+        </tbody>
+    </table>
+</div>
 
             <!-- Tabla de pagos -->
             <h5 class="section-title">Pagos</h5>
