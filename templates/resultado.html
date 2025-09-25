@@ -92,6 +92,29 @@
 </div>
 
 
+
+
+<!-- Sección: Datos del Cliente -->
+<h5 class="section-title">Datos del Cliente</h5>
+<div class="table-responsive">
+    <table class="table table-bordered table-striped text-center align-middle">
+        <thead class="table-dark">
+            <tr>
+                <th style="width: 250px;">Nombre</th>
+                <th>RFC</th>
+		<th>Celular</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td style="width: 250px;"><i class="fa-solid fa-user me-2"></i> {{ datos.datosCliente.nombreCliente }}</td>
+                <td>{{ datos.datosCliente.rfc }}</td>
+                <td>{{ datos.datosCliente.celular }}</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
    <!-- Datos de Referencias -->
 <h5 class="section-title mt-4">Referencias</h5>
 <table class="table table-bordered table-striped text-center align-middle">
@@ -133,27 +156,6 @@
         {% endif %}
     </tbody>
 </table>
-
-<!-- Sección: Datos del Cliente -->
-<h5 class="section-title">Datos del Cliente</h5>
-<div class="table-responsive">
-    <table class="table table-bordered table-striped text-center align-middle">
-        <thead class="table-dark">
-            <tr>
-                <th style="width: 250px;">Nombre</th>
-                <th>RFC</th>
-		<th>Celular</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr>
-                <td style="width: 250px;"><i class="fa-solid fa-user me-2"></i> {{ datos.datosCliente.nombreCliente }}</td>
-                <td>{{ datos.datosCliente.rfc }}</td>
-                <td>{{ datos.datosCliente.celular }}</td>
-            </tr>
-        </tbody>
-    </table>
-</div>
 
 
 <!-- Sección: Datos de Saldos -->
