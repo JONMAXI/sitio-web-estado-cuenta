@@ -7,6 +7,7 @@ from io import BytesIO
 from PIL import Image
 import re
 from db import get_connection
+from db_queries import obtener_datos_cliente
 
 app = Flask(__name__)
 app.secret_key = 'clave_super_secreta'
@@ -236,6 +237,7 @@ def login():
 def logout():
     session.pop('usuario', None)
     return redirect('/login')
+#----------------------------------------------------
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
@@ -249,23 +251,34 @@ def index():
         id_credito_form = request.form.get('idCredito', '').strip()
         fecha_corte = request.form.get('fechaCorte', '').strip() or fecha_actual_iso
 
+        # Validación de fecha
         try:
             datetime.strptime(fecha_corte, "%Y-%m-%d")
-        except ValueError:
+        except ValueError as ve:
+            print(f"[DEBUG] Fecha inválida: {ve}")
             return render_template("index.html", error="Fecha inválida", fecha_actual_iso=fecha_corte)
 
+        # Búsqueda por nombre o ID
         resultados = []
-        if nombre_busqueda:
-            resultados = buscar_credito_por_nombre(nombre_busqueda)
-            if not resultados:
-                return render_template("index.html", error="No se encontraron créditos con ese nombre", fecha_actual_iso=fecha_corte)
-            if len(resultados) > 1:
-                return render_template("index.html", resultados=resultados, fecha_actual_iso=fecha_corte)
-            id_credito = resultados[0]['id_credito']
-        elif id_credito_form:
-            id_credito = int(id_credito_form)
-        else:
-            return render_template("index.html", error="Debes proporcionar nombre o ID de crédito", fecha_actual_iso=fecha_corte)
+        try:
+            if nombre_busqueda:
+                resultados = buscar_credito_por_nombre(nombre_busqueda)
+                if not resultados:
+                    return render_template("index.html", error="No se encontraron créditos con ese nombre", fecha_actual_iso=fecha_corte)
+                if len(resultados) > 1:
+                    return render_template("index.html", resultados=resultados, fecha_actual_iso=fecha_corte)
+                id_credito = resultados[0]['id_credito']
+            elif id_credito_form:
+                try:
+                    id_credito = int(id_credito_form)
+                except ValueError as ve:
+                    print(f"[DEBUG] ID de crédito inválido: {ve}")
+                    return render_template("index.html", error="ID de crédito inválido", fecha_actual_iso=fecha_corte)
+            else:
+                return render_template("index.html", error="Debes proporcionar nombre o ID de crédito", fecha_actual_iso=fecha_corte)
+        except Exception as e:
+            print(f"[DEBUG] Error buscando crédito: {e}")
+            return render_template("index.html", error="Error buscando crédito", fecha_actual_iso=fecha_corte)
 
         # Llamada API externa
         payload = {"idCredito": int(id_credito), "fechaCorte": fecha_corte}
@@ -273,13 +286,15 @@ def index():
         try:
             res = requests.post(ENDPOINT, json=payload, headers=headers, timeout=15)
             data = res.json()
-        except Exception:
+        except Exception as e:
+            print(f"[DEBUG] Error llamando API externa: {e}")
             auditar_estado_cuenta(session['usuario']['username'], id_credito, fecha_corte, 0, "Respuesta no válida del servidor")
             return render_template("resultado.html", error="Respuesta no válida del servidor")
 
         if res.status_code != 200 or "estadoCuenta" not in data:
             mensaje = data.get("mensaje", ["Error desconocido"])[0] if data else "No se encontraron datos para este crédito"
             auditar_estado_cuenta(session['usuario']['username'], id_credito, fecha_corte, 0, mensaje)
+            print(f"[DEBUG] API retornó error o datos faltantes: {mensaje}")
             return render_template("resultado.html", error=mensaje)
 
         estado_cuenta = data["estadoCuenta"]
@@ -290,14 +305,31 @@ def index():
             and not estado_cuenta.get("datosPagos")
         ):
             auditar_estado_cuenta(session['usuario']['username'], id_credito, fecha_corte, 0, "Crédito vacío")
+            print(f"[DEBUG] Crédito vacío para id_credito={id_credito}")
             return render_template("resultado.html", usuario_no_existe=True)
 
-        auditar_estado_cuenta(session['usuario']['username'], id_credito, fecha_corte, 1, None)
-        tabla = procesar_estado_cuenta(estado_cuenta)
+        # -------------------- Traer datos de referencias con debug --------------------
+        try:
+            datos_referencias = obtener_datos_cliente(id_credito)
+            if not datos_referencias:
+                print(f"[DEBUG] No se encontraron referencias para id_credito={id_credito}")
+            estado_cuenta["datosReferencias"] = datos_referencias or {}
+        except Exception as e:
+            print(f"[DEBUG] Error al obtener datos de referencias para id_credito={id_credito}: {e}")
+            estado_cuenta["datosReferencias"] = {}
+        # ----------------------------------------------------------------------
+
+        try:
+            auditar_estado_cuenta(session['usuario']['username'], id_credito, fecha_corte, 1, None)
+            tabla = procesar_estado_cuenta(estado_cuenta)
+        except Exception as e:
+            print(f"[DEBUG] Error procesando estado de cuenta para id_credito={id_credito}: {e}")
+            return render_template("resultado.html", error="Error procesando estado de cuenta")
+
         return render_template("resultado.html", datos=estado_cuenta, resultado=tabla)
 
+    # GET
     return render_template("index.html", fecha_actual_iso=fecha_actual_iso)
-
 ####-----------------------------------------------------------------------------------
 
 @app.route('/documentos', methods=['GET', 'POST'])
