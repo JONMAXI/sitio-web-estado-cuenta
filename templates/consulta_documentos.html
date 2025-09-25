@@ -134,8 +134,8 @@ img.documento-imagen {
                 </div>
 
                 <div class="controls mb-2">
-                    <button class="btn btn-sm btn-secondary me-1" id="zoomIn">+</button>
-                    <button class="btn btn-sm btn-secondary" id="zoomOut">-</button>
+                    <button type="button" class="btn btn-sm btn-secondary me-1" id="zoomIn">+</button>
+                    <button type="button" class="btn btn-sm btn-secondary" id="zoomOut">-</button>
                 </div>
                 <div id="pdfContainer"></div>
             </div>
@@ -150,7 +150,9 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs
 const container = document.getElementById('pdfContainer');
 let scale = 1.0;
 let currentBlob = null;
+let currentPdf = null;
 
+// Función para la marca de agua
 function drawWatermark(ctx, width, height, text = "SIN VALOR") {
     ctx.save();
     ctx.globalAlpha = 0.3;
@@ -158,11 +160,9 @@ function drawWatermark(ctx, width, height, text = "SIN VALOR") {
     ctx.font = "bold 50px Arial";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-
     const stepX = 200;
     const stepY = 150;
     const angle = -Math.PI / 4;
-
     for (let y = -height; y < height * 2; y += stepY) {
         for (let x = -width; x < width * 2; x += stepX) {
             ctx.save();
@@ -175,19 +175,20 @@ function drawWatermark(ctx, width, height, text = "SIN VALOR") {
     ctx.restore();
 }
 
+// Render PDF con zoom funcional
 async function renderPdf(blob) {
-    const pdf = await pdfjsLib.getDocument({ data: await blob.arrayBuffer() }).promise;
+    if(!currentPdf){
+        currentPdf = await pdfjsLib.getDocument({ data: await blob.arrayBuffer() }).promise;
+    }
     container.innerHTML = '';
 
-    for (let i = 1; i <= pdf.numPages; i++) {
-        const page = await pdf.getPage(i);
-
-        // viewport con scale para zoom
+    for (let i = 1; i <= currentPdf.numPages; i++) {
+        const page = await currentPdf.getPage(i);
         const viewport = page.getViewport({ scale: scale });
 
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
-        const ratio = window.devicePixelRatio || 2; // alta resolución
+        const ratio = window.devicePixelRatio || 2;
 
         canvas.width = viewport.width * ratio;
         canvas.height = viewport.height * ratio;
@@ -203,6 +204,7 @@ async function renderPdf(blob) {
     }
 }
 
+// Render para imágenes con watermark
 function renderImageWithWatermark(blob) {
     container.innerHTML = '';
     const img = document.createElement('img');
@@ -219,6 +221,7 @@ function renderImageWithWatermark(blob) {
     };
 }
 
+// Zoom buttons
 document.getElementById('zoomIn').onclick = () => { 
     if(currentBlob){ 
         scale *= 1.2;
@@ -232,6 +235,7 @@ document.getElementById('zoomOut').onclick = () => {
     } 
 };
 
+// Form submit
 document.getElementById('formConsulta').addEventListener('submit', async function(e){
     e.preventDefault();
     const id = document.getElementById('idDocumento').value.trim();
@@ -239,7 +243,6 @@ document.getElementById('formConsulta').addEventListener('submit', async functio
     if (!id) return;
 
     const url = `/descargar/${id}?tipo=${tipo}`;
-
     document.getElementById('loader').style.display = 'flex';
     document.getElementById('visorContainer').style.display = 'block';
     container.innerHTML = '';
@@ -249,17 +252,18 @@ document.getElementById('formConsulta').addEventListener('submit', async functio
         if (!res.ok) throw new Error(await res.text());
         const blob = await res.blob();
         currentBlob = blob;
+        currentPdf = null; // fuerza nuevo renderizado
 
-        if (tipo === 'INE') {
+        if(tipo === 'INE'){
             scale = 1.0;
             await renderPdf(blob);
-        } else if (tipo === 'Contrato') {
+        } else if(tipo === 'Contrato'){
             scale = 3.0; // máxima resolución para Contrato
             await renderPdf(blob);
         } else {
             renderImageWithWatermark(blob);
         }
-    } catch (err) {
+    } catch(err){
         Swal.fire({ icon:'error', title:'Error', text: err.message });
         document.getElementById('visorContainer').style.display = 'none';
     } finally {
@@ -269,4 +273,3 @@ document.getElementById('formConsulta').addEventListener('submit', async functio
 </script>
 </body>
 </html>
-
