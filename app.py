@@ -237,7 +237,6 @@ def logout():
     session.pop('usuario', None)
     return redirect('/login')
 
-
 @app.route('/', methods=['GET', 'POST'])
 def index():
     if 'usuario' not in session:
@@ -250,7 +249,6 @@ def index():
         id_credito_form = request.form.get('idCredito', '').strip()
         fecha_corte = request.form.get('fechaCorte', '').strip() or fecha_actual_iso
 
-        # Validación de fecha
         try:
             datetime.strptime(fecha_corte, "%Y-%m-%d")
         except ValueError:
@@ -258,7 +256,7 @@ def index():
 
         resultados = []
         if nombre_busqueda:
-            resultados = buscar_credito_por_nombre(nombre_busqueda)  # tu método existente
+            resultados = buscar_credito_por_nombre(nombre_busqueda)
             if not resultados:
                 return render_template("index.html", error="No se encontraron créditos con ese nombre", fecha_actual_iso=fecha_corte)
             if len(resultados) > 1:
@@ -269,7 +267,7 @@ def index():
         else:
             return render_template("index.html", error="Debes proporcionar nombre o ID de crédito", fecha_actual_iso=fecha_corte)
 
-        # --- Llamada API externa ---
+        # Llamada API externa
         payload = {"idCredito": int(id_credito), "fechaCorte": fecha_corte}
         headers = {"Token": TOKEN, "Content-Type": "application/json"}
         try:
@@ -294,25 +292,12 @@ def index():
             auditar_estado_cuenta(session['usuario']['username'], id_credito, fecha_corte, 0, "Crédito vacío")
             return render_template("resultado.html", usuario_no_existe=True)
 
-        # --- Auditar éxito ---
         auditar_estado_cuenta(session['usuario']['username'], id_credito, fecha_corte, 1, None)
-
-        # --- Procesar tabla de estado de cuenta ---
         tabla = procesar_estado_cuenta(estado_cuenta)
+        return render_template("resultado.html", datos=estado_cuenta, resultado=tabla)
 
-        # --- Consulta a DB3 para obtener datos del cliente y referencias ---
-        datos_cliente = obtener_datos_cliente(id_credito)
-
-        # --- Renderizar resultado con tabla y datos del cliente ---
-        return render_template(
-            "resultado.html",
-            datos=estado_cuenta,
-            resultado=tabla,
-            cliente=datos_cliente
-        )
-
-    # GET
     return render_template("index.html", fecha_actual_iso=fecha_actual_iso)
+
 ###-----------------------------------------------------------------------------------
 
 
