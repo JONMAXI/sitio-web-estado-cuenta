@@ -359,20 +359,20 @@ document.addEventListener("DOMContentLoaded", function () {
         diasMoraElem.appendChild(badge);
 
         // Guardar último pago completo
-        if (totalAplicado >= montoCuota) {
-            if (!ultimoPagoCompleto || ultimaFechaPago > ultimoPagoCompleto.fecha) {
-                ultimoPagoCompleto = { fecha: ultimaFechaPago, monto: montoUltimoPago };
-            }
+       if (totalAplicado >= montoCuota && montoUltimoPago > 0) {
+        if (!ultimoPagoCompleto || ultimaFechaPago > ultimoPagoCompleto.fecha) {
+            ultimoPagoCompleto = { fecha: ultimaFechaPago, monto: montoUltimoPago };
+        }
         }
     });
 
-    // Mostrar último pago completo
-    const tdUltimoPago = document.getElementById("ultimo-pago-completo");
-    if (ultimoPagoCompleto) {
-        tdUltimoPago.innerHTML = `
-            <strong>${ultimoPagoCompleto.fecha.toLocaleString()}</strong><br>
-            Monto: $${ultimoPagoCompleto.monto.toFixed(2)}
-        `;
+  // Mostrar último pago completo
+const tdUltimoPago = document.getElementById("ultimo-pago-completo");
+if (ultimoPagoCompleto) {
+    tdUltimoPago.innerHTML = `
+        <strong>${ultimoPagoCompleto.fecha.toLocaleString()}</strong><br>
+        Monto: $${ultimoPagoCompleto.monto.toFixed(2)}
+    `;
     }
 });
     </script>
