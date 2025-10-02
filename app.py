@@ -367,7 +367,7 @@ def documentos():
 
     usuario = session['usuario']['username']
 
-    if usuario in ('sandra.avendano@maxikash.mx', 'jon'):
+    if usuario in ('sandra.avendano@maxikash.mx', 'amiel.granda@maxikash.mx', 'admin'):
         return render_template("consulta_documentos_admin.html", usuario=usuario)
     else:
         return render_template("consulta_documentos.html", usuario=usuario)
