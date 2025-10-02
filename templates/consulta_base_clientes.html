@@ -13,6 +13,7 @@
         .images img { max-height: 120px; margin: 0.25rem; border-radius: 8px; }
         .btn-back { margin-top: 1.5rem; }
         .group { padding: .35rem 0; border-bottom: 1px dashed #e9ecef; margin-bottom: .5rem; }
+        .small-muted { font-size:0.9rem; color:#6c757d; }
     </style>
 </head>
 <body>
@@ -20,7 +21,7 @@
 
     {% if resultados %}
 
-        <!-- TABLA GLOBAL -->
+        <!-- TABLA GLOBAL (UN REGISTRO POR CLIENTE) -->
         <div class="card mb-4 p-3 shadow-sm">
             <h4 class="mb-3">Resumen Global de Clientes</h4>
             <div class="table-responsive">
@@ -36,7 +37,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        {% for r in resultados %}
+                        {% for r in resumen_global %}
                         <tr>
                             <td>{{ r.nombre_cliente }}</td>
                             <td>{{ r.id_credito }}</td>
