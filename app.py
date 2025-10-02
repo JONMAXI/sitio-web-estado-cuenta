@@ -558,6 +558,7 @@ def descargar(id):
         return "Cliente no encontrado en la Base de Datos", 500
 
 # ------------------ BÚSQUEDA EN BASE_CLIENTES ------------------
+# ------------------ BÚSQUEDA EN BASE_CLIENTES ------------------
 def buscar_base_clientes(nombre_cliente=None, id_credito=None):
     db_clientes = os.environ.get('DB_NAME_CLIENTES')
     if not db_clientes:
@@ -585,13 +586,13 @@ def buscar_base_clientes(nombre_cliente=None, id_credito=None):
     params = []
 
     if nombre_cliente:
-        query += " AND nombre_cliente LIKE %s"
+        query += " AND nombre_completo_cliente LIKE %s"
         params.append(f"%{nombre_cliente}%")
     if id_credito:
         query += " AND id_credito = %s"
         params.append(id_credito)
 
-    query += " LIMIT 1000"  # Evitamos traer demasiados registros
+    query += " LIMIT 1000"
 
     resultados = []
     with get_connection(db_clientes) as conn:
@@ -602,10 +603,9 @@ def buscar_base_clientes(nombre_cliente=None, id_credito=None):
             cursor.close()
     return resultados
 
-
-# ------------------ RUTA CONSULTA BASE CLIENTES ------------------
-@app.route('/consulta_base_clientes', methods=['GET', 'POST'])
-def consulta_base_clientes():
+# ------------------ RUTA FORMULARIO DE BÚSQUEDA ------------------
+@app.route('/busqueda_base_cliente', methods=['GET', 'POST'])
+def busqueda_base_cliente():
     if 'usuario' not in session:
         return redirect('/login')
 
@@ -615,31 +615,41 @@ def consulta_base_clientes():
     id_credito = ''
 
     if request.method == 'POST':
-        nombre_cliente = request.form.get('nombre_cliente', '').strip()
-        id_credito = request.form.get('id_credito', '').strip()
+        modo = request.form.get('modoBusqueda')
+        nombre_cliente = request.form.get('nombre', '').strip()
+        id_credito = request.form.get('idCredito', '').strip()
 
-        if not nombre_cliente and not id_credito:
-            error = "Debes ingresar un Nombre de Cliente o un ID de Crédito"
-        else:
+        if modo == "nombre" and nombre_cliente:
+            resultados = buscar_base_clientes(nombre_cliente=nombre_cliente)
+            if not resultados:
+                error = "No se encontraron registros con ese nombre"
+
+        elif modo == "id" and id_credito:
             try:
-                id_credito_val = int(id_credito) if id_credito else None
+                id_credito_val = int(id_credito)
+                resultados = buscar_base_clientes(id_credito=id_credito_val)
+                if resultados:
+                    # Redirige directamente a consulta_base_clientes.html
+                    return render_template(
+                        "consulta_base_clientes.html",
+                        resultados=resultados
+                    )
+                else:
+                    error = "No se encontró ningún crédito con ese ID"
             except ValueError:
                 error = "ID de Crédito inválido"
-                id_credito_val = None
 
-            if not error:
-                resultados = buscar_base_clientes(nombre_cliente=nombre_cliente, id_credito=id_credito_val)
-                if not resultados:
-                    error = "No se encontraron registros con los criterios proporcionados"
+        else:
+            error = "Debes ingresar un Nombre o un ID de Crédito"
 
     return render_template(
-        "consulta_base_clientes.html",
+        "busqueda_base_cliente_m.html",
         resultados=resultados,
         error=error,
         nombre_cliente=nombre_cliente,
-        id_credito=id_credito
+        id_credito=id_credito,
+        request_form=request.form
     )
-
 
 # ------------------ INICIO ------------------
 if __name__ == "__main__":
