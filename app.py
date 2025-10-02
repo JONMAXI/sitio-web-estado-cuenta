@@ -230,6 +230,56 @@ def buscar_credito_por_nombre(nombre):
             cursor.close()
     return resultados
 
+import os
+from conexion_mysql import get_connection  # tu función de conexión existente
+
+# ------------------ BÚSQUEDA EN BASE CLIENTES ------------------
+def buscar_base_clientes(nombre_cliente=None, limite=1000):
+    """
+    Devuelve registros de la tabla base_clientes filtrados por nombre_cliente.
+    Si nombre_cliente es None, trae los primeros 'limite' registros.
+    """
+    db_clientes = os.environ.get('DB_NAME_CLIENTES')
+    if not db_clientes:
+        print("[DB ERROR] Variable de entorno DB_NAME_CLIENTES no definida")
+        return []
+
+    query = """
+        SELECT id, id_team, team_supervisor, id_base, nombre_base, fecha_carga_base,
+               id_registro, id_key, estatus, usuario_asignado, nombre_cliente, id_credito,
+               cuenta_clabe, nombre_completo_cliente, pago_semanal, pagos_vencidos,
+               deuda_total, codigo_gestor, usuario, telefono_celular, cp, direccion,
+               direccion_ine, direccion_actual, geolocalizacion, direccion_geo, donde_firma,
+               referencia_personal1, parentesco1, telefono_referencia1,
+               referencia_personal2, parentesco2, telefono_referencia2, contacto,
+               medio_contactacion_ccc, medio_contactacion_campo, dictamen_campo,
+               dictamen_ccc, promesa_pago, motivo_negativa, porque_atraso_pago,
+               con_quien_mala_experiencia, fecha_hora, kilometraje, numero_serie,
+               marca_modelo, actualizacion_direccion, actualizacion_telefono,
+               comentarios_generales, foto1, foto2, foto3, adjunto, video, device_imei,
+               fecha_sistema, fecha_dispositivo, longitud, latitud, ubicacion_usuario,
+               fake_gps, secure_area, images
+        FROM base_clientes
+    """
+
+    params = ()
+    if nombre_cliente:
+        query += " WHERE nombre_cliente LIKE %s"
+        params = (f"%{nombre_cliente}%",)
+    
+    query += " LIMIT %s"
+    params += (limite,)
+
+    resultados = []
+    with get_connection(db_clientes) as conn:
+        if conn:
+            cursor = conn.cursor(dictionary=True)
+            cursor.execute(query, params)
+            resultados = cursor.fetchall()
+            cursor.close()
+
+    return resultados
+
 # ------------------ RUTAS ------------------
 @app.route('/login', methods=['GET', 'POST'])
 def login():
