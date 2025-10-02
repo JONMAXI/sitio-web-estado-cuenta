@@ -25,10 +25,10 @@
         <div class="card mb-4 p-3 shadow-sm">
 
             <h4 class="mb-3">Resumen Global de Clientes</h4>
-<!-- BOTÓN ACCIONES / NUEVA BÚSQUEDA -->
-                        <div class="mt-3">
-                            <a href="/busqueda_base_cliente" class="btn btn-primary">Nueva Búsqueda</a>
-                        </div>
+            <!-- BOTÓN ACCIONES / NUEVA BÚSQUEDA -->
+            <div class="mt-3">
+                <a href="/busqueda_base_cliente" class="btn btn-primary">Nueva Búsqueda</a>
+            </div>
             <div class="table-responsive">
                 <table class="table table-bordered table-striped">
                     <thead class="table-light">
@@ -76,26 +76,22 @@
 
                         <!-- IDENTIFICACIÓN Y ASIGNACIÓN -->
                         <h5 class="section-title">Identificación y asignación</h5>
-                        <table class="table table-bordered">
-                            <tbody>
+                        <table class="table table-bordered table-striped">
+                            <thead class="table-light">
                                 <tr>
                                     <th>team_supervisor</th>
-                                    <td>{{ r.team_supervisor }}</td>
-                                </tr>
-                                <tr>
                                     <th>id_base</th>
-                                    <td>{{ r.id_base }}</td>
-                                </tr>
-                                <tr>
                                     <th>nombre_base</th>
-                                    <td>{{ r.nombre_base }}</td>
-                                </tr>
-                                <tr>
                                     <th>fecha_carga_base</th>
-                                    <td>{{ r.fecha_carga_base }}</td>
-                                </tr>
-                                <tr>
                                     <th>usuario_asignado</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>{{ r.team_supervisor }}</td>
+                                    <td>{{ r.id_base }}</td>
+                                    <td>{{ r.nombre_base }}</td>
+                                    <td>{{ r.fecha_carga_base }}</td>
                                     <td>{{ r.usuario_asignado }}</td>
                                 </tr>
                             </tbody>
@@ -103,26 +99,22 @@
 
                         <!-- CONTACTOS Y REFERENCIAS -->
                         <h5 class="section-title">Contactos y referencias</h5>
-                        <table class="table table-bordered">
-                            <tbody>
+                        <table class="table table-bordered table-striped">
+                            <thead class="table-light">
                                 <tr>
                                     <th>Referencia 1</th>
-                                    <td>{{ r.referencia_personal1 }} - {{ r.parentesco1 }} - {{ r.telefono_referencia1 }}</td>
-                                </tr>
-                                <tr>
                                     <th>Referencia 2</th>
-                                    <td>{{ r.referencia_personal2 }} - {{ r.parentesco2 }} - {{ r.telefono_referencia2 }}</td>
-                                </tr>
-                                <tr>
                                     <th>Contacto</th>
-                                    <td>{{ r.contacto }}</td>
-                                </tr>
-                                <tr>
                                     <th>Medio Campo</th>
-                                    <td>{{ r.medio_contactacion_campo }}</td>
-                                </tr>
-                                <tr>
                                     <th>Dictamen Campo</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>{{ r.referencia_personal1 }} - {{ r.parentesco1 }} - {{ r.telefono_referencia1 }}</td>
+                                    <td>{{ r.referencia_personal2 }} - {{ r.parentesco2 }} - {{ r.telefono_referencia2 }}</td>
+                                    <td>{{ r.contacto }}</td>
+                                    <td>{{ r.medio_contactacion_campo }}</td>
                                     <td>{{ r.dictamen_campo }}</td>
                                 </tr>
                             </tbody>
@@ -130,30 +122,24 @@
 
                         <!-- DIRECCIONES Y UBICACIÓN -->
                         <h5 class="section-title">Direcciones y ubicación</h5>
-                        <table class="table table-bordered">
-                            <tbody>
+                        <table class="table table-bordered table-striped">
+                            <thead class="table-light">
                                 <tr>
                                     <th>Dirección</th>
-                                    <td>{{ r.direccion }}</td>
-                                </tr>
-                                <tr>
                                     <th>Dirección INE</th>
-                                    <td>{{ r.direccion_ine }}</td>
-                                </tr>
-                                <tr>
                                     <th>Dirección actual</th>
-                                    <td>{{ r.direccion_actual }}</td>
-                                </tr>
-                                <tr>
                                     <th>Dirección geo</th>
-                                    <td>{{ r.direccion_geo }}</td>
-                                </tr>
-                                <tr>
                                     <th>Geolocalización</th>
-                                    <td>{{ r.geolocalizacion }}</td>
-                                </tr>
-                                <tr>
                                     <th>Ubicación usuario</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>{{ r.direccion }}</td>
+                                    <td>{{ r.direccion_ine }}</td>
+                                    <td>{{ r.direccion_actual }}</td>
+                                    <td>{{ r.direccion_geo }}</td>
+                                    <td>{{ r.geolocalizacion }}</td>
                                     <td>{{ r.ubicacion_usuario }}</td>
                                 </tr>
                             </tbody>
@@ -168,8 +154,6 @@
                                 {% endif %}
                             </div>
                         </div>
-
-                        
 
                     </div>
                 </div>
