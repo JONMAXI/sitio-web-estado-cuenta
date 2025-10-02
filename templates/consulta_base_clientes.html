@@ -43,14 +43,15 @@
 
     {% if resultados %}
 
-
         <!-- TABLA GLOBAL (UN REGISTRO POR CLIENTE) -->
         <div class="card mb-4 p-3 shadow-sm">
-<div class="table-container mt-3">
-            <div class="d-flex justify-content-end mt-4">
-                <a href="/" class="btn btn-custom">Nueva Consulta</a>
-            </div>
 
+            <h4 class="mb-3">Resumen Global de Clientes</h4>
+            <!-- BOTÓN ACCIONES / NUEVA BÚSQUEDA -->
+            <div class="d-flex justify-content-end mt-4">
+                <a href="/busqueda_base_cliente" class="btn btn-custom">Nueva Consulta</a>
+            </div>
+            
             <div class="table-responsive">
                 <table class="table table-bordered table-striped">
                     <thead class="table-light">
@@ -167,8 +168,8 @@
                             <div class="mt-2">
                                 {% if r.images %}
                                    <span class="small-muted">
-    images: <a href="{{ r.images }}" target="_blank">{{ r.images }}</a>
-</span>
+                                        images: <a href="{{ r.images }}" target="_blank">{{ r.images }}</a>
+                                   </span>
                                 {% endif %}
                             </div>
                         </div>
