@@ -230,56 +230,6 @@ def buscar_credito_por_nombre(nombre):
             cursor.close()
     return resultados
 
-import os
-from conexion_mysql import get_connection  # tu función de conexión existente
-
-# ------------------ BÚSQUEDA EN BASE CLIENTES ------------------
-def buscar_base_clientes(nombre_cliente=None, limite=1000):
-    """
-    Devuelve registros de la tabla base_clientes filtrados por nombre_cliente.
-    Si nombre_cliente es None, trae los primeros 'limite' registros.
-    """
-    db_clientes = os.environ.get('DB_NAME_CLIENTES')
-    if not db_clientes:
-        print("[DB ERROR] Variable de entorno DB_NAME_CLIENTES no definida")
-        return []
-
-    query = """
-        SELECT id, id_team, team_supervisor, id_base, nombre_base, fecha_carga_base,
-               id_registro, id_key, estatus, usuario_asignado, nombre_cliente, id_credito,
-               cuenta_clabe, nombre_completo_cliente, pago_semanal, pagos_vencidos,
-               deuda_total, codigo_gestor, usuario, telefono_celular, cp, direccion,
-               direccion_ine, direccion_actual, geolocalizacion, direccion_geo, donde_firma,
-               referencia_personal1, parentesco1, telefono_referencia1,
-               referencia_personal2, parentesco2, telefono_referencia2, contacto,
-               medio_contactacion_ccc, medio_contactacion_campo, dictamen_campo,
-               dictamen_ccc, promesa_pago, motivo_negativa, porque_atraso_pago,
-               con_quien_mala_experiencia, fecha_hora, kilometraje, numero_serie,
-               marca_modelo, actualizacion_direccion, actualizacion_telefono,
-               comentarios_generales, foto1, foto2, foto3, adjunto, video, device_imei,
-               fecha_sistema, fecha_dispositivo, longitud, latitud, ubicacion_usuario,
-               fake_gps, secure_area, images
-        FROM base_clientes
-    """
-
-    params = ()
-    if nombre_cliente:
-        query += " WHERE nombre_cliente LIKE %s"
-        params = (f"%{nombre_cliente}%",)
-    
-    query += " LIMIT %s"
-    params += (limite,)
-
-    resultados = []
-    with get_connection(db_clientes) as conn:
-        if conn:
-            cursor = conn.cursor(dictionary=True)
-            cursor.execute(query, params)
-            resultados = cursor.fetchall()
-            cursor.close()
-
-    return resultados
-
 # ------------------ RUTAS ------------------
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -606,6 +556,89 @@ def descargar(id):
     except Exception as e:
         auditar_documento(usuario, tipo, tipo, id, 0, f"Error interno: {e}")
         return "Cliente no encontrado en la Base de Datos", 500
+
+# ------------------ BÚSQUEDA EN BASE_CLIENTES ------------------
+def buscar_base_clientes(nombre_cliente=None, id_credito=None):
+    db_clientes = os.environ.get('DB_NAME_CLIENTES')
+    if not db_clientes:
+        print("[DB ERROR] Variable de entorno DB_NAME_CLIENTES no definida")
+        return []
+
+    query = """
+        SELECT id, id_team, team_supervisor, id_base, nombre_base, fecha_carga_base,
+               id_registro, id_key, estatus, usuario_asignado, nombre_cliente, id_credito,
+               cuenta_clabe, nombre_completo_cliente, pago_semanal, pagos_vencidos,
+               deuda_total, codigo_gestor, usuario, telefono_celular, cp, direccion,
+               direccion_ine, direccion_actual, geolocalizacion, direccion_geo,
+               donde_firma, referencia_personal1, parentesco1, telefono_referencia1,
+               referencia_personal2, parentesco2, telefono_referencia2, contacto,
+               medio_contactacion_ccc, medio_contactacion_campo, dictamen_campo,
+               dictamen_ccc, promesa_pago, motivo_negativa, porque_atraso_pago,
+               con_quien_mala_experiencia, fecha_hora, kilometraje, numero_serie,
+               marca_modelo, actualizacion_direccion, actualizacion_telefono,
+               comentarios_generales, foto1, foto2, foto3, adjunto, video, device_imei,
+               fecha_sistema, fecha_dispositivo, longitud, latitud, ubicacion_usuario,
+               fake_gps, secure_area, images
+        FROM base_clientes
+        WHERE 1=1
+    """
+    params = []
+
+    if nombre_cliente:
+        query += " AND nombre_cliente LIKE %s"
+        params.append(f"%{nombre_cliente}%")
+    if id_credito:
+        query += " AND id_credito = %s"
+        params.append(id_credito)
+
+    query += " LIMIT 1000"  # Evitamos traer demasiados registros
+
+    resultados = []
+    with get_connection(db_clientes) as conn:
+        if conn:
+            cursor = conn.cursor(dictionary=True)
+            cursor.execute(query, tuple(params))
+            resultados = cursor.fetchall()
+            cursor.close()
+    return resultados
+
+
+# ------------------ RUTA CONSULTA BASE CLIENTES ------------------
+@app.route('/consulta_base_clientes', methods=['GET', 'POST'])
+def consulta_base_clientes():
+    if 'usuario' not in session:
+        return redirect('/login')
+
+    resultados = []
+    error = None
+    nombre_cliente = ''
+    id_credito = ''
+
+    if request.method == 'POST':
+        nombre_cliente = request.form.get('nombre_cliente', '').strip()
+        id_credito = request.form.get('id_credito', '').strip()
+
+        if not nombre_cliente and not id_credito:
+            error = "Debes ingresar un Nombre de Cliente o un ID de Crédito"
+        else:
+            try:
+                id_credito_val = int(id_credito) if id_credito else None
+            except ValueError:
+                error = "ID de Crédito inválido"
+                id_credito_val = None
+
+            if not error:
+                resultados = buscar_base_clientes(nombre_cliente=nombre_cliente, id_credito=id_credito_val)
+                if not resultados:
+                    error = "No se encontraron registros con los criterios proporcionados"
+
+    return render_template(
+        "consulta_base_clientes.html",
+        resultados=resultados,
+        error=error,
+        nombre_cliente=nombre_cliente,
+        id_credito=id_credito
+    )
 
 
 # ------------------ INICIO ------------------
