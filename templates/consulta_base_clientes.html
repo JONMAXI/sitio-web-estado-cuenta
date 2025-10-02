@@ -7,44 +7,102 @@
     <style>
         body { background-color: #f8f9fa; }
         .card { border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-bottom: 1rem; background: #fff; }
-        h5.section-title { margin-top: 2rem; color: #495057; }
-        .table-container { padding: 1rem; }
+        .section-title { color: #495057; margin-bottom: 1rem; }
+        .info-label { font-weight: 600; }
+        .info-value { word-break: break-word; }
+        .row { margin-bottom: 0.5rem; }
+        .images img { max-height: 120px; margin-right: 0.5rem; margin-bottom: 0.5rem; border-radius: 8px; }
+        .btn-back { margin-top: 1rem; }
     </style>
 </head>
 <body>
 <div class="container py-4">
 
     {% if resultados %}
-    <div class="card table-container">
-        <h5 class="section-title">Resultados de Búsqueda</h5>
-        <table class="table table-bordered table-striped text-center align-middle">
-            <thead class="table-dark">
-                <tr>
-                    <th>ID</th>
-                    <th>Nombre</th>
-                    <th>ID Crédito</th>
-                    <th>Celular</th>
-                    <th>Estatus</th>
-                    <th>Promesa Pago</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for r in resultados %}
-                <tr>
-                    <td>{{ r.id }}</td>
-                    <td>{{ r.nombre_completo_cliente }}</td>
-                    <td>{{ r.id_credito }}</td>
-                    <td>{{ r.telefono_celular }}</td>
-                    <td>{{ r.estatus }}</td>
-                    <td>{{ r.promesa_pago }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        <div class="mt-3">
-            <a href="/busqueda_base_cliente" class="btn btn-primary w-100">Nueva Búsqueda</a>
+        {% for r in resultados %}
+        <div class="card p-4">
+            <h4 class="section-title">Información General del Cliente</h4>
+            <div class="row">
+                <div class="col-md-4 info-label">ID:</div>
+                <div class="col-md-8 info-value">{{ r.id }}</div>
+            </div>
+            <div class="row">
+                <div class="col-md-4 info-label">Nombre completo:</div>
+                <div class="col-md-8 info-value">{{ r.nombre_completo_cliente }}</div>
+            </div>
+            <div class="row">
+                <div class="col-md-4 info-label">ID Crédito:</div>
+                <div class="col-md-8 info-value">{{ r.id_credito }}</div>
+            </div>
+            <div class="row">
+                <div class="col-md-4 info-label">Estatus:</div>
+                <div class="col-md-8 info-value">{{ r.estatus }}</div>
+            </div>
+            <div class="row">
+                <div class="col-md-4 info-label">Pagos vencidos:</div>
+                <div class="col-md-8 info-value">{{ r.pagos_vencidos }}</div>
+            </div>
+            <div class="row">
+                <div class="col-md-4 info-label">Deuda total:</div>
+                <div class="col-md-8 info-value">{{ r.deuda_total }}</div>
+            </div>
+            <div class="row">
+                <div class="col-md-4 info-label">Pago semanal:</div>
+                <div class="col-md-8 info-value">{{ r.pago_semanal }}</div>
+            </div>
+            <div class="row">
+                <div class="col-md-4 info-label">Teléfono celular:</div>
+                <div class="col-md-8 info-value">{{ r.telefono_celular }}</div>
+            </div>
+            <div class="row">
+                <div class="col-md-4 info-label">Dirección:</div>
+                <div class="col-md-8 info-value">{{ r.direccion_actual or r.direccion }}</div>
+            </div>
+            <div class="row">
+                <div class="col-md-4 info-label">Código postal:</div>
+                <div class="col-md-8 info-value">{{ r.cp }}</div>
+            </div>
+            <div class="row">
+                <div class="col-md-4 info-label">Promesa de pago:</div>
+                <div class="col-md-8 info-value">{{ r.promesa_pago }}</div>
+            </div>
+
+            <h5 class="section-title mt-4">Contactos y Referencias</h5>
+            <div class="row">
+                <div class="col-md-4 info-label">Referencia 1:</div>
+                <div class="col-md-8 info-value">{{ r.referencia_personal1 }} - {{ r.parentesco1 }} - {{ r.telefono_referencia1 }}</div>
+            </div>
+            <div class="row">
+                <div class="col-md-4 info-label">Referencia 2:</div>
+                <div class="col-md-8 info-value">{{ r.referencia_personal2 }} - {{ r.parentesco2 }} - {{ r.telefono_referencia2 }}</div>
+            </div>
+
+            <h5 class="section-title mt-4">Documentos y Multimedia</h5>
+            <div class="images">
+                {% if r.foto1 %}<img src="{{ r.foto1 }}" alt="Foto 1">{% endif %}
+                {% if r.foto2 %}<img src="{{ r.foto2 }}" alt="Foto 2">{% endif %}
+                {% if r.foto3 %}<img src="{{ r.foto3 }}" alt="Foto 3">{% endif %}
+                {% if r.adjunto %}<a href="{{ r.adjunto }}" class="btn btn-sm btn-outline-primary">Adjunto</a>{% endif %}
+                {% if r.video %}<a href="{{ r.video }}" class="btn btn-sm btn-outline-secondary">Video</a>{% endif %}
+            </div>
+
+            <h5 class="section-title mt-4">Información Extra</h5>
+            <div class="row">
+                <div class="col-md-4 info-label">Geolocalización:</div>
+                <div class="col-md-8 info-value">{{ r.geolocalizacion }}</div>
+            </div>
+            <div class="row">
+                <div class="col-md-4 info-label">Dispositivo IMEI:</div>
+                <div class="col-md-8 info-value">{{ r.device_imei }}</div>
+            </div>
+            <div class="row">
+                <div class="col-md-4 info-label">Última actualización:</div>
+                <div class="col-md-8 info-value">{{ r.fecha_actualizacion or r.fecha_sistema }}</div>
+            </div>
+
+            <a href="/busqueda_base_cliente" class="btn btn-primary w-100 btn-back">Nueva Búsqueda</a>
         </div>
-    </div>
+        {% endfor %}
     {% else %}
         <div class="alert alert-warning">No hay resultados para mostrar.</div>
     {% endif %}
