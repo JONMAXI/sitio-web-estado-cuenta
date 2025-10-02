@@ -41,7 +41,7 @@
                         {% for r in resultados %}
                             {% if r.id_credito not in vistos %}
                                 <tr>
-                                    <td>{{ r.nombre_cliente }}</td>
+                                    <td>{{ r.nombre_completo_cliente }}</td>
                                     <td>{{ r.id_credito }}</td>
                                     <td>{{ r.cp }}</td>
                                     <td>{{ r.telefono_celular }}</td>
@@ -62,7 +62,7 @@
             <div class="accordion-item mb-3">
                 <h2 class="accordion-header" id="heading{{ loop.index }}">
                     <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ loop.index }}">
-                        {{ r.nombre_completo_cliente or r.nombre_cliente }} — Crédito: {{ r.id_credito }} — {{ r.estatus }}
+                        {{ r.nombre_cliente }} — {{ r.estatus }}
                     </button>
                 </h2>
 
@@ -71,57 +71,96 @@
 
                         <!-- IDENTIFICACIÓN Y ASIGNACIÓN -->
                         <h5 class="section-title">Identificación y asignación</h5>
-                        <div class="group row">
-                            <div class="col-md-4 info-label">ID:</div><div class="col-md-8 info-value">{{ r.id }}</div>
-                            <div class="col-md-4 info-label">id_team:</div><div class="col-md-8 info-value">{{ r.id_team }}</div>
-                            <div class="col-md-4 info-label">team_supervisor:</div><div class="col-md-8 info-value">{{ r.team_supervisor }}</div>
-                            <div class="col-md-4 info-label">id_base:</div><div class="col-md-8 info-value">{{ r.id_base }}</div>
-                            <div class="col-md-4 info-label">nombre_base:</div><div class="col-md-8 info-value">{{ r.nombre_base }}</div>
-                            <div class="col-md-4 info-label">fecha_carga_base:</div><div class="col-md-8 info-value">{{ r.fecha_carga_base }}</div>
-                            <div class="col-md-4 info-label">id_registro:</div><div class="col-md-8 info-value">{{ r.id_registro }}</div>
-                            <div class="col-md-4 info-label">id_key:</div><div class="col-md-8 info-value">{{ r.id_key }}</div>
-                            <div class="col-md-4 info-label">usuario_asignado:</div><div class="col-md-8 info-value">{{ r.usuario_asignado }}</div>
-                            <div class="col-md-4 info-label">codigo_gestor:</div><div class="col-md-8 info-value">{{ r.codigo_gestor }}</div>
-                            <div class="col-md-4 info-label">usuario (sistema):</div><div class="col-md-8 info-value">{{ r.usuario }}</div>
-                        </div>
+                        <table class="table table-bordered">
+                            <tbody>
+                                <tr>
+                                    <th>team_supervisor</th>
+                                    <td>{{ r.team_supervisor }}</td>
+                                </tr>
+                                <tr>
+                                    <th>id_base</th>
+                                    <td>{{ r.id_base }}</td>
+                                </tr>
+                                <tr>
+                                    <th>nombre_base</th>
+                                    <td>{{ r.nombre_base }}</td>
+                                </tr>
+                                <tr>
+                                    <th>fecha_carga_base</th>
+                                    <td>{{ r.fecha_carga_base }}</td>
+                                </tr>
+                                <tr>
+                                    <th>usuario_asignado</th>
+                                    <td>{{ r.usuario_asignado }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
 
                         <!-- CONTACTOS Y REFERENCIAS -->
                         <h5 class="section-title">Contactos y referencias</h5>
-                        <div class="group row">
-                            <div class="col-md-4 info-label">Referencia 1:</div><div class="col-md-8 info-value">{{ r.referencia_personal1 }} - {{ r.parentesco1 }} - {{ r.telefono_referencia1 }}</div>
-                            <div class="col-md-4 info-label">Referencia 2:</div><div class="col-md-8 info-value">{{ r.referencia_personal2 }} - {{ r.parentesco2 }} - {{ r.telefono_referencia2 }}</div>
-                            <div class="col-md-4 info-label">Contacto:</div><div class="col-md-8 info-value">{{ r.contacto }}</div>
-                            <div class="col-md-4 info-label">Medio CCC:</div><div class="col-md-8 info-value">{{ r.medio_contactacion_ccc }}</div>
-                            <div class="col-md-4 info-label">Medio Campo:</div><div class="col-md-8 info-value">{{ r.medio_contactacion_campo }}</div>
-                            <div class="col-md-4 info-label">Dictamen Campo:</div><div class="col-md-8 info-value">{{ r.dictamen_campo }}</div>
-                            <div class="col-md-4 info-label">Dictamen CCC:</div><div class="col-md-8 info-value">{{ r.dictamen_ccc }}</div>
-                        </div>
+                        <table class="table table-bordered">
+                            <tbody>
+                                <tr>
+                                    <th>Referencia 1</th>
+                                    <td>{{ r.referencia_personal1 }} - {{ r.parentesco1 }} - {{ r.telefono_referencia1 }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Referencia 2</th>
+                                    <td>{{ r.referencia_personal2 }} - {{ r.parentesco2 }} - {{ r.telefono_referencia2 }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Contacto</th>
+                                    <td>{{ r.contacto }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Medio Campo</th>
+                                    <td>{{ r.medio_contactacion_campo }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Dictamen Campo</th>
+                                    <td>{{ r.dictamen_campo }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
 
                         <!-- DIRECCIONES Y UBICACIÓN -->
                         <h5 class="section-title">Direcciones y ubicación</h5>
-                        <div class="group row">
-                            <div class="col-md-4 info-label">Dirección:</div><div class="col-md-8 info-value">{{ r.direccion }}</div>
-                            <div class="col-md-4 info-label">Dirección INE:</div><div class="col-md-8 info-value">{{ r.direccion_ine }}</div>
-                            <div class="col-md-4 info-label">Dirección actual:</div><div class="col-md-8 info-value">{{ r.direccion_actual }}</div>
-                            <div class="col-md-4 info-label">Dirección geo:</div><div class="col-md-8 info-value">{{ r.direccion_geo }}</div>
-                            <div class="col-md-4 info-label">Geolocalización:</div><div class="col-md-8 info-value">{{ r.geolocalizacion }}</div>
-                            <div class="col-md-4 info-label">Longitud:</div><div class="col-md-8 info-value">{{ r.longitud }}</div>
-                            <div class="col-md-4 info-label">Latitud:</div><div class="col-md-8 info-value">{{ r.latitud }}</div>
-                            <div class="col-md-4 info-label">Ubicación usuario:</div><div class="col-md-8 info-value">{{ r.ubicacion_usuario }}</div>
-                        </div>
+                        <table class="table table-bordered">
+                            <tbody>
+                                <tr>
+                                    <th>Dirección</th>
+                                    <td>{{ r.direccion }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Dirección INE</th>
+                                    <td>{{ r.direccion_ine }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Dirección actual</th>
+                                    <td>{{ r.direccion_actual }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Dirección geo</th>
+                                    <td>{{ r.direccion_geo }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Geolocalización</th>
+                                    <td>{{ r.geolocalizacion }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Ubicación usuario</th>
+                                    <td>{{ r.ubicacion_usuario }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
 
                         <!-- DOCUMENTOS Y MULTIMEDIA -->
                         <h5 class="section-title">Documentos y multimedia</h5>
                         <div class="group">
-                            <div class="images">
-                                {% if r.foto1 %}<img src="{{ r.foto1 }}" alt="Foto 1">{% endif %}
-                                {% if r.foto2 %}<img src="{{ r.foto2 }}" alt="Foto 2">{% endif %}
-                                {% if r.foto3 %}<img src="{{ r.foto3 }}" alt="Foto 3">{% endif %}
-                            </div>
                             <div class="mt-2">
-                                {% if r.adjunto %}<a href="{{ r.adjunto }}" class="btn btn-sm btn-outline-primary me-2" target="_blank">Adjunto</a>{% endif %}
-                                {% if r.video %}<a href="{{ r.video }}" class="btn btn-sm btn-outline-secondary me-2" target="_blank">Video</a>{% endif %}
-                                {% if r.images %}<span class="small-muted">images: {{ r.images }}</span>{% endif %}
+                                {% if r.images %}
+                                    <span class="small-muted">images: {{ r.images }}</span>
+                                {% endif %}
                             </div>
                         </div>
 
