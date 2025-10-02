@@ -17,6 +17,19 @@
     </style>
 </head>
 <body>
+
+<div class="header-bar d-flex justify-content-between align-items-center">
+  <div class="d-flex align-items-center">
+    <img src="https://maxikash.mx/cdn/shop/files/Logotipo-Maxikash-Outline.png?v=1749328460" alt="Logo" class="logo me-3">
+  </div>
+  {% if session.get('usuario') %}
+  <div class="text-end">
+    <a href="/documentos" class="btn btn-outline-primary logout-btn">Consulta Documentos</a>
+    <a href="/logout" class="btn btn-outline-danger logout-btn">Cerrar sesión</a>
+  </div>
+  {% endif %}
+</div>
+
 <div class="container py-4">
 
     {% if resultados %}
@@ -102,8 +115,6 @@
                         <table class="table table-bordered table-striped">
                             <thead class="table-light">
                                 <tr>
-                                    <th>Referencia 1</th>
-                                    <th>Referencia 2</th>
                                     <th>Contacto</th>
                                     <th>Medio Campo</th>
                                     <th>Dictamen Campo</th>
@@ -111,8 +122,6 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td>{{ r.referencia_personal1 }} - {{ r.parentesco1 }} - {{ r.telefono_referencia1 }}</td>
-                                    <td>{{ r.referencia_personal2 }} - {{ r.parentesco2 }} - {{ r.telefono_referencia2 }}</td>
                                     <td>{{ r.contacto }}</td>
                                     <td>{{ r.medio_contactacion_campo }}</td>
                                     <td>{{ r.dictamen_campo }}</td>
@@ -126,8 +135,6 @@
                             <thead class="table-light">
                                 <tr>
                                     <th>Dirección</th>
-                                    <th>Dirección INE</th>
-                                    <th>Dirección actual</th>
                                     <th>Dirección geo</th>
                                     <th>Geolocalización</th>
                                     <th>Ubicación usuario</th>
@@ -150,7 +157,9 @@
                         <div class="group">
                             <div class="mt-2">
                                 {% if r.images %}
-                                    <span class="small-muted">images: {{ r.images }}</span>
+                                   <span class="small-muted">
+    images: <a href="{{ r.images }}" target="_blank">{{ r.images }}</a>
+</span>
                                 {% endif %}
                             </div>
                         </div>
