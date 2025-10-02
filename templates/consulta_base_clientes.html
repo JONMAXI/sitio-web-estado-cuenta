@@ -37,15 +37,19 @@
                         </tr>
                     </thead>
                     <tbody>
-                        {% for r in resumen_global %}
-                        <tr>
-                            <td>{{ r.nombre_cliente }}</td>
-                            <td>{{ r.id_credito }}</td>
-                            <td>{{ r.cp }}</td>
-                            <td>{{ r.telefono_celular }}</td>
-                            <td>{{ r.cuenta_clabe }}</td>
-                            <td>{{ r.pago_semanal }}</td>
-                        </tr>
+                        {% set vistos = [] %}
+                        {% for r in resultados %}
+                            {% if r.id_credito not in vistos %}
+                                <tr>
+                                    <td>{{ r.nombre_cliente }}</td>
+                                    <td>{{ r.id_credito }}</td>
+                                    <td>{{ r.cp }}</td>
+                                    <td>{{ r.telefono_celular }}</td>
+                                    <td>{{ r.cuenta_clabe }}</td>
+                                    <td>{{ r.pago_semanal }}</td>
+                                </tr>
+                                {% do vistos.append(r.id_credito) %}
+                            {% endif %}
                         {% endfor %}
                     </tbody>
                 </table>
