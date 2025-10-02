@@ -11,9 +11,11 @@ from db_queries import obtener_datos_cliente
 from db_queries import DB3_NAME
 import mimetypes
 import urllib.parse
+from jinja2 import Environment
 
 app = Flask(__name__)
 app.secret_key = 'clave_super_secreta'
+app.jinja_env.add_extension('jinja2.ext.do')
 
 # ------------------ CONFIGURACIÓN API EXTERNA ------------------
 TOKEN = "3oJVoAHtwWn7oBT4o340gFkvq9uWRRmpFo7p"
