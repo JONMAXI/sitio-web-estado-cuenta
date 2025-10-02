@@ -8,6 +8,9 @@ from PIL import Image
 import re
 from db import get_connection
 from db_queries import obtener_datos_cliente
+from db_queries import DB3_NAME
+import mimetypes
+import urllib.parse
 
 app = Flask(__name__)
 app.secret_key = 'clave_super_secreta'
@@ -120,7 +123,7 @@ def procesar_estado_cuenta(estado_cuenta):
                 "remaining": monto_real,
                 "cuotas": cuotas,
                 "fechaValor": p.get("fechaValor"),
-                 # ****** aquí se cambia fechaRegistro por fechaDeposito ******
+                # ****** aquí se cambia fechaRegistro por fechaDeposito ******
                 "fechaRegistro": p.get("fechaDeposito") or p.get("fechaRegistro"),
                 "montoPagoOriginal": monto_pago,
                 "extemporaneos": extemporaneos,
@@ -355,7 +358,6 @@ def index():
     return render_template("index.html", fecha_actual_iso=fecha_actual_iso)
 ####-----------------------------------------------------------------------------------
 
-
 @app.route('/documentos', methods=['GET', 'POST'])
 def documentos():
     if 'usuario' not in session:
@@ -363,11 +365,10 @@ def documentos():
 
     usuario = session['usuario']['username']
 
-    if usuario in ('admin', 'sandra.avendano@maxikash.mx', 'prueba'):
+    if usuario in ('s', 'jon'):
         return render_template("consulta_documentos_admin.html", usuario=usuario)
     else:
         return render_template("consulta_documentos.html", usuario=usuario)
-
 
 # ------------------ DESCARGA DE DOCUMENTOS ------------------
 # ------------------ DESCARGA DE DOCUMENTOS ------------------
