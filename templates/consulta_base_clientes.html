@@ -1,149 +1,189 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <title>Detalle Cliente</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        body { background-color: #f8f9fa; }
-        .accordion-button { font-weight: 700; color: #222; }
-        .info-label { font-weight: 600; color: #495057; }
-        .info-value { word-break: break-word; }
-        .section-title { margin-top: 1rem; color: #0d6efd; font-size: 1.05rem; font-weight:700; }
-        .images img { max-height: 120px; margin: 0.25rem; border-radius: 8px; }
-        .btn-back { margin-top: 1.5rem; }
-        .group { padding: .35rem 0; border-bottom: 1px dashed #e9ecef; margin-bottom: .5rem; }
-        .small-muted { font-size:0.9rem; color:#6c757d; }
+  <meta charset="UTF-8">
+  <title>Detalle Cliente</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body { background-color: #f8f9fa; }
+    .accordion-button { font-weight: 700; color: #222; }
+    .info-label { font-weight: 600; color: #495057; }
+    .info-value { word-break: break-word; }
+    .section-title { margin-top: 1rem; color: #0d6efd; font-size: 1.05rem; font-weight:700; }
+    .images img { max-height: 120px; margin: 0.25rem; border-radius: 8px; }
+    .btn-back { margin-top: 1.5rem; }
+    .group { padding: .35rem 0; border-bottom: 1px dashed #e9ecef; margin-bottom: .5rem; }
+    .small-muted { font-size:0.9rem; color:#6c757d; }
 
-        .logo { max-height: 60px; }
-        .header-bar { background-color: white; padding: 1rem 2rem; box-shadow: 0 0 10px rgba(0,0,0,0.05); }
-        .logout-btn { border-radius: 20px; font-weight: 500; }
-        .card { border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); padding: 2rem; background: #fff; margin-bottom: 1rem; }
-        .form-control { border-radius: 10px; }
-        .btn-custom { background-color: #0d6efd; color: white; font-weight: 500; }
-        .btn-custom:hover { background-color: #084298; }
-        h3.section-title { margin-top: 2rem; color: #495057; }
-    </style>
+    .logo { max-height: 60px; }
+    .header-bar { background-color: white; padding: 1rem 2rem; box-shadow: 0 0 10px rgba(0,0,0,0.05); }
+    .logout-btn { border-radius: 20px; font-weight: 500; }
+    .card { border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); padding: 2rem; background: #fff; margin-bottom: 1rem; }
+    .form-control { border-radius: 10px; }
+    .btn-custom { background-color: #0d6efd; color: white; font-weight: 500; }
+    .btn-custom:hover { background-color: #084298; }
+    h3.section-title { margin-top: 2rem; color: #495057; }
+  </style>
 </head>
 <body>
 
-<div class="header-bar d-flex justify-content-between align-items-center">
-  <div class="d-flex align-items-center">
-    <img src="https://maxikash.mx/cdn/shop/files/Logotipo-Maxikash-Outline.png?v=1749328460" alt="Logo" class="logo me-3">
+  <div class="header-bar d-flex justify-content-between align-items-center">
+    <div class="d-flex align-items-center">
+      <img src="https://maxikash.mx/cdn/shop/files/Logotipo-Maxikash-Outline.png?v=1749328460" alt="Logo" class="logo me-3">
+    </div>
+    {% if session.get('usuario') %}
+    <div class="text-end">
+      <a href="/documentos" class="btn btn-outline-primary logout-btn">Consulta Documentos</a>
+      <a href="/logout" class="btn btn-outline-danger logout-btn">Cerrar sesión</a>
+    </div>
+    {% endif %}
   </div>
-  {% if session.get('usuario') %}
-  <div class="text-end">
-    <a href="/documentos" class="btn btn-outline-primary logout-btn">Consulta Documentos</a>
-    <a href="/logout" class="btn btn-outline-danger logout-btn">Cerrar sesión</a>
-  </div>
-  {% endif %}
-</div>
 
-<div class="container py-4">
-
+  <div class="container py-4">
     {% if resultados %}
 
-        <!-- TABLA GLOBAL (UN REGISTRO POR CLIENTE) -->
-        <div class="card mb-4 p-3 shadow-sm">
+    <!-- TABLA GLOBAL (UN REGISTRO POR CLIENTE) -->
+    <div class="card mb-4 p-3 shadow-sm">
+      <h4 class="mb-3">Gestiones Sky</h4>
 
-            <h4 class="mb-3">Gestiones Sky </h4>
-            <!-- BOTÓN ACCIONES / NUEVA BÚSQUEDA -->
-            <div class="d-flex justify-content-end mt-4">
-                <a href="/busqueda_base_cliente" class="btn btn-custom">Nueva Consulta</a>
-            </div>
-            <br>
-            <div class="table-responsive">
-                <table class="table table-bordered table-striped">
-                    <thead class="table-light">
-                        <tr>
-                            <th>Nombre Cliente</th>
-                            <th>ID Crédito</th>
-                            <th>CP</th>
-                            <th>Teléfono</th>
-                            <th>Cuenta CLABE</th>
-                            <th>Pago Semanal</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% set vistos = [] %}
-                        {% for r in resultados %}
-                            {% if r.id_credito not in vistos %}
-                                <tr>
-                                    <td>{{ r.nombre_completo_cliente }}</td>
-                                    <td>{{ r.id_credito }}</td>
-                                    <td>{{ r.cp }}</td>
-                                    <td>{{ r.telefono_celular }}</td>
-                                    <td>{{ r.cuenta_clabe }}</td>
-                                    <td>{{ r.pago_semanal }}</td>
-                                </tr>
-                                {% do vistos.append(r.id_credito) %}
-                            {% endif %}
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
+      <div class="d-flex justify-content-end mt-4">
+        <a href="/busqueda_base_cliente" class="btn btn-custom">Nueva Consulta</a>
+      </div>
+      <br>
 
-        <!-- ACORDEONES POR CLIENTE -->
-        <div class="accordion" id="accordionClientes">
+      <div class="table-responsive">
+        <table class="table table-bordered table-striped">
+          <thead class="table-light">
+            <tr>
+              <th>Nombre Cliente</th>
+              <th>ID Crédito</th>
+              <th>CP</th>
+              <th>Teléfono</th>
+              <th>Cuenta CLABE</th>
+              <th>Pago Semanal</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% set vistos = [] %}
             {% for r in resultados %}
-            <div class="accordion-item mb-3">
-                <h2 class="accordion-header" id="heading{{ loop.index }}">
-                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ loop.index }}">
-                        {{ r.nombre_cliente }} — {{ r.dictamen_ccc }}
-                    </button>
-                </h2>
-
-                <div id="collapse{{ loop.index }}" class="accordion-collapse collapse" data-bs-parent="#accordionClientes">
-                    <div class="accordion-body">
-
-                        <!-- IDENTIFICACIÓN Y ASIGNACIÓN -->
-                        <h5 class="section-title">Identificación y asignación</h5>
-                        <table class="table table-bordered table-striped">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>team_supervisor</th>
-                                    <th>id_base</th>
-                                    <th>nombre_base</th>
-                                    <th>fecha_carga_base</th>
-                                    <th>usuario_asignado</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td>{{ r.team_supervisor }}</td>
-                                    <td>{{ r.id_base }}</td>
-                                    <td>{{ r.nombre_base }}</td>
-                                    <td>{{ r.fecha_carga_base }}</td>
-                                    <td>{{ r.usuario_asignado }}</td>
-                                </tr>
-                            </tbody>
-                        </table>
-
-                     
-                        <!-- DOCUMENTOS Y MULTIMEDIA -->
-                        <h5 class="section-title">Documentos y multimedia</h5>
-                        <div class="group">
-                            <div class="mt-2">
-                                {% if r.images %}
-                                   <span class="small-muted">
-                                        images: <a href="{{ r.images }}" target="_blank">{{ r.images }}</a>
-                                   </span>
-                                {% endif %}
-                            </div>
-                        </div>
-
-                    </div>
-                </div>
-            </div>
+              {% if r.id_credito not in vistos %}
+                <tr>
+                  <td>{{ r.nombre_completo_cliente }}</td>
+                  <td>{{ r.id_credito }}</td>
+                  <td>{{ r.cp }}</td>
+                  <td>{{ r.telefono_celular }}</td>
+                  <td>{{ r.cuenta_clabe }}</td>
+                  <td>{{ r.pago_semanal }}</td>
+                </tr>
+                {% do vistos.append(r.id_credito) %}
+              {% endif %}
             {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ACORDEONES POR CLIENTE -->
+    <div class="accordion" id="accordionClientes">
+      {% for r in resultados %}
+      <div class="accordion-item mb-3">
+        <h2 class="accordion-header" id="heading{{ loop.index }}">
+          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ loop.index }}">
+            {{ r.nombre_cliente }} — {{ r.dictamen_ccc }} — {{ r.fecha_carga_base }}
+          </button>
+        </h2>
+
+        <div id="collapse{{ loop.index }}" class="accordion-collapse collapse" data-bs-parent="#accordionClientes">
+          <div class="accordion-body">
+
+            <!-- IDENTIFICACIÓN Y ASIGNACIÓN -->
+            <h5 class="section-title">Identificación y asignación</h5>
+            <table class="table table-bordered table-striped">
+              <thead class="table-light">
+                <tr>
+                  <th>team_supervisor</th>
+                  <th>id_base</th>
+                  <th>nombre_base</th>
+                  <th>fecha_carga_base</th>
+                  <th>usuario_asignado</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>{{ r.team_supervisor }}</td>
+                  <td>{{ r.id_base }}</td>
+                  <td>{{ r.nombre_base }}</td>
+                  <td>{{ r.fecha_carga_base }}</td>
+                  <td>{{ r.usuario_asignado }}</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <!-- CONTACTACIÓN Y DICTAMEN -->
+            {% if r.medio_contactacion_ccc or r.medio_contactacion_campo or r.dictamen_campo or r.dictamen_ccc %}
+            <h5 class="section-title mt-4">Contactación y dictamen</h5>
+            <table class="table table-bordered table-striped">
+              <thead class="table-light">
+                <tr>
+                  {% if r.medio_contactacion_ccc %}<th>Medio contactación CCC</th>{% endif %}
+                  {% if r.medio_contactacion_campo %}<th>Medio contactación campo</th>{% endif %}
+                  {% if r.dictamen_campo %}<th>Dictamen campo</th>{% endif %}
+                  {% if r.dictamen_ccc %}<th>Dictamen CCC</th>{% endif %}
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  {% if r.medio_contactacion_ccc %}<td>{{ r.medio_contactacion_ccc }}</td>{% endif %}
+                  {% if r.medio_contactacion_campo %}<td>{{ r.medio_contactacion_campo }}</td>{% endif %}
+                  {% if r.dictamen_campo %}<td>{{ r.dictamen_campo }}</td>{% endif %}
+                  {% if r.dictamen_ccc %}<td>{{ r.dictamen_ccc }}</td>{% endif %}
+                </tr>
+              </tbody>
+            </table>
+            {% endif %}
+
+            <!-- PROMESAS Y COMENTARIOS -->
+            <h5 class="section-title mt-4">Promesas y comentarios</h5>
+            <table class="table table-bordered table-striped">
+              <thead class="table-light">
+                <tr>
+                  <th>Promesa de pago</th>
+                  <th>Por qué atraso el pago</th>
+                  <th>Comentarios generales</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>{{ r.promesa_pago }}</td>
+                  <td>{{ r.porque_atraso_pago }}</td>
+                  <td>{{ r.comentarios_generales }}</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <!-- DOCUMENTOS Y MULTIMEDIA -->
+            <h5 class="section-title mt-4">Documentos y multimedia</h5>
+            <div class="group">
+              {% if r.images %}
+              <div class="mt-2">
+                <span class="small-muted">
+                  Imagen: <a href="{{ r.images }}" target="_blank">{{ r.images }}</a>
+                </span>
+              </div>
+              {% endif %}
+            </div>
+
+          </div>
         </div>
+      </div>
+      {% endfor %}
+    </div>
 
     {% else %}
-        <div class="alert alert-warning">No hay resultados para mostrar.</div>
+      <div class="alert alert-warning">No hay resultados para mostrar.</div>
     {% endif %}
+  </div>
 
-</div>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
