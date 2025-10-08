@@ -26,6 +26,7 @@
         </div>
         {% if session.get('usuario') %}
         <div class="text-end">
+            <a href="/busqueda_base_cliente" class="btn btn-outline-secondary logout-btn" title="S"><span class="fw-bold">S</span></a>
             <a href="/documentos" class="btn btn-outline-primary logout-btn">Consulta Documentos</a>
             <a href="/logout" class="btn btn-outline-danger logout-btn">Cerrar sesión</a>
         </div>
