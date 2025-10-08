@@ -126,17 +126,18 @@
               <thead class="table-light">
                 <tr>
                   {% if r.medio_contactacion_ccc %}<th>Medio contactación CCC</th>{% endif %}
+                  {% if r.dictamen_ccc %}<th>Dictamen CCC</th>{% endif %}
                   {% if r.medio_contactacion_campo %}<th>Medio contactación campo</th>{% endif %}
                   {% if r.dictamen_campo %}<th>Dictamen campo</th>{% endif %}
-                  {% if r.dictamen_ccc %}<th>Dictamen CCC</th>{% endif %}
                 </tr>
               </thead>
               <tbody>
                 <tr>
                   {% if r.medio_contactacion_ccc %}<td>{{ r.medio_contactacion_ccc }}</td>{% endif %}
+                  {% if r.dictamen_ccc %}<td>{{ r.dictamen_ccc }}</td>{% endif %}
                   {% if r.medio_contactacion_campo %}<td>{{ r.medio_contactacion_campo }}</td>{% endif %}
                   {% if r.dictamen_campo %}<td>{{ r.dictamen_campo }}</td>{% endif %}
-                  {% if r.dictamen_ccc %}<td>{{ r.dictamen_ccc }}</td>{% endif %}
+                  
                 </tr>
               </tbody>
             </table>
