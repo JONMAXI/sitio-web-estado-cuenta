@@ -250,12 +250,14 @@ def login():
             return f"Error de conexión a MySQL: {err}"
 
         if user:
-            session['usuario'] = {
-                'username': user['username'],
-                'nombre_completo': user['nombre_completo'],
-                'puesto': user['puesto'],
-                'grupo': user['grupo']
-            }
+ 	# Guardamos solo el username como string para usarlo en Jinja y rutas
+            session['usuario'] = user['username']  # ej: 'denise.azpeita@maxikash.mx'
+            #session['usuario'] = {
+             #   'username': user['username'],
+             #   'nombre_completo': user['nombre_completo'],
+             #   'puesto': user['puesto'],
+             #   'grupo': user['grupo']
+            #}
             return redirect('/')
         else:
             return render_template("login.html", error="Credenciales inválidas")
