@@ -250,13 +250,12 @@ def login():
             return f"Error de conexión a MySQL: {err}"
 
         if user:
-            #session['usuario'] = {
-                #'username': user['username'],
-               # 'nombre_completo': user['nombre_completo'],
-              #  'puesto': user['puesto'],
-             #   'grupo': user['grupo']
-            #}
-            session['usuario'] = user['username']
+            session['usuario'] = {
+                'username': user['username'],
+                'nombre_completo': user['nombre_completo'],
+                'puesto': user['puesto'],
+                'grupo': user['grupo']
+            }
             return redirect('/')
         else:
             return render_template("login.html", error="Credenciales inválidas")
@@ -366,7 +365,7 @@ def documentos():
     if 'usuario' not in session:
         return redirect('/login')
 
-    usuario = session['usuario']
+    usuario = session['usuario']['username']
 
     if usuario in ('sandra.avendano@maxikash.mx', 'amiel.granda@maxikash.mx', 'admin'):
         return render_template("consulta_documentos_admin.html", usuario=usuario)
