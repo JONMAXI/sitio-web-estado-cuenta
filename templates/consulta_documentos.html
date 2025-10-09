@@ -112,7 +112,21 @@ body { background-color: #f8f9fa; margin:0; padding:0; font-family: Arial, sans-
   </div>
   {% if session.get('usuario') %}
   <div class="text-end mt-2 mt-md-0 d-flex flex-wrap gap-1">
-    <a href="/busqueda_base_cliente" class="btn btn-outline-secondary logout-btn" title="S"><span class="fw-bold">S</span></a>
+    
+      {# Solo mostrar el botón de búsqueda a usuarios autorizados #}
+      {% if session['usuario']|lower in [
+        'denise.azpeita@maxikash.mx',
+        'josue.aldrete@maxikash.mx',
+        'pablo.g',
+        'victor.s',
+        'david.reyes@maxikash.mx',
+        'erika.ortiz@maxikash.mx'
+      ] %}
+        <a href="/busqueda_base_cliente" class="btn btn-outline-secondary logout-btn" title="S">
+          <span class="fw-bold">S</span>
+        </a>
+      {% endif %}
+
     <a href="/" class="btn btn-outline-primary">Consulta Estado de Cuenta</a>
     <a href="/logout" class="btn btn-outline-danger">Cerrar sesión</a>
   </div>
