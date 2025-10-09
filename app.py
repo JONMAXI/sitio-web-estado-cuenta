@@ -619,7 +619,7 @@ def busqueda_base_cliente():
         return redirect('/login')
 
  # Limita acceso solo a ciertos usuarios
-    if session['usuario'].lower() not in ['denise.azpeita@maxikash.mx', 'josue.aldrete@maxikash.mx', 'pablo.g', 'victor.s', 'david.reyes@maxikash.mx', 'erika.ortiz@maxikash.mx', 'admin']:
+    if session['usuario_nombre'].lower() not in ['denise.azpeita@maxikash.mx', 'josue.aldrete@maxikash.mx', 'pablo.g', 'victor.s', 'david.reyes@maxikash.mx', 'erika.ortiz@maxikash.mx', 'admin']:
         return "Acceso no autorizado", 403  # o redirect('/no_autorizado')
 
     resultados = []
