@@ -250,12 +250,13 @@ def login():
             return f"Error de conexión a MySQL: {err}"
 
         if user:
-            session['usuario'] = {
-                'username': user['username'],
-                'nombre_completo': user['nombre_completo'],
-                'puesto': user['puesto'],
-                'grupo': user['grupo']
-            }
+            #session['usuario'] = {
+                #'username': user['username'],
+               # 'nombre_completo': user['nombre_completo'],
+              #  'puesto': user['puesto'],
+             #   'grupo': user['grupo']
+            #}
+            session['usuario'] = user['username']
             return redirect('/')
         else:
             return render_template("login.html", error="Credenciales inválidas")
