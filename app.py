@@ -233,6 +233,7 @@ def buscar_credito_por_nombre(nombre):
     return resultados
 
 # ------------------ RUTAS ------------------
+# ------------------ RUTAS ------------------
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -256,18 +257,21 @@ def login():
                 'puesto': user['puesto'],
                 'grupo': user['grupo']
             }
-# 🔹 Agregamos una variable adicional solo con el username
-    session['usuario_nombre'] = user['username']  # ej: 'denise.azpeita@maxikash.mx'
+            # 🔹 Agregamos una variable adicional solo con el username
+            session['usuario_nombre'] = user['username']  # ej: 'denise.azpeita@maxikash.mx'
 
             return redirect('/')
         else:
             return render_template("login.html", error="Credenciales inválidas")
     return render_template("login.html")
 
+
 @app.route('/logout')
 def logout():
     session.pop('usuario', None)
+    session.pop('usuario_nombre', None)  # 🔹 Limpia también la nueva variable
     return redirect('/login')
+
 #----------------------------------------------------
 
 @app.route('/', methods=['GET', 'POST'])
