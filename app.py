@@ -365,7 +365,7 @@ def documentos():
     if 'usuario' not in session:
         return redirect('/login')
 
-    usuario = session['usuario']['username']
+    usuario = session['usuario']
 
     if usuario in ('sandra.avendano@maxikash.mx', 'amiel.granda@maxikash.mx', 'admin'):
         return render_template("consulta_documentos_admin.html", usuario=usuario)
