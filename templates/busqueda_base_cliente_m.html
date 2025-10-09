@@ -28,7 +28,7 @@
   <div class="text-end">
    
       {# Solo mostrar el botón de búsqueda a usuarios autorizados #}
-      {% if session['usuario']|lower in [
+      {% if session['usuario_nombre']|lower in [
         'denise.azpeita@maxikash.mx',
         'josue.aldrete@maxikash.mx',
         'pablo.g',

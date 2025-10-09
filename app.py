@@ -256,6 +256,9 @@ def login():
                 'puesto': user['puesto'],
                 'grupo': user['grupo']
             }
+# 🔹 Agregamos una variable adicional solo con el username
+    session['usuario_nombre'] = user['username']  # ej: 'denise.azpeita@maxikash.mx'
+
             return redirect('/')
         else:
             return render_template("login.html", error="Credenciales inválidas")
