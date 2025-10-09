@@ -250,14 +250,12 @@ def login():
             return f"Error de conexión a MySQL: {err}"
 
         if user:
- 	# Guardamos solo el username como string para usarlo en Jinja y rutas
-            session['usuario'] = user['username']  # ej: 'denise.azpeita@maxikash.mx'
-            #session['usuario'] = {
-             #   'username': user['username'],
-             #   'nombre_completo': user['nombre_completo'],
-             #   'puesto': user['puesto'],
-             #   'grupo': user['grupo']
-            #}
+            session['usuario'] = {
+                'username': user['username'],
+                'nombre_completo': user['nombre_completo'],
+                'puesto': user['puesto'],
+                'grupo': user['grupo']
+            }
             return redirect('/')
         else:
             return render_template("login.html", error="Credenciales inválidas")
@@ -361,18 +359,28 @@ def index():
     # GET
     return render_template("index.html", fecha_actual_iso=fecha_actual_iso)
 ####-----------------------------------------------------------------------------------
-
 @app.route('/documentos', methods=['GET', 'POST'])
 def documentos():
+    # Verifica que haya sesión
     if 'usuario' not in session:
         return redirect('/login')
 
-    usuario = session['usuario']['username']
+    # Obtenemos el username directamente (ahora session['usuario'] es string)
+    usuario = session['usuario'].lower()  # minúsculas para comparación
 
-    if usuario in ('sandra.avendano@maxikash.mx', 'amiel.granda@maxikash.mx', 'admin'):
+    # Lista de usuarios con permisos de administrador
+    admins = [
+        'sandra.avendano@maxikash.mx',
+        'amiel.granda@maxikash.mx',
+        'admin'
+    ]
+
+    # Renderiza la plantilla según el tipo de usuario
+    if usuario in admins:
         return render_template("consulta_documentos_admin.html", usuario=usuario)
     else:
         return render_template("consulta_documentos.html", usuario=usuario)
+
 
 # ------------------ DESCARGA DE DOCUMENTOS ------------------
 # ------------------ DESCARGA DE DOCUMENTOS ------------------
@@ -613,7 +621,9 @@ def busqueda_base_cliente():
     if 'usuario' not in session:
         return redirect('/login')
 
- 
+ # Limita acceso solo a ciertos usuarios
+    if session['usuario'].lower() not in ['denise.azpeita@maxikash.mx', 'josue.aldrete@maxikash.mx', 'pablo.g', 'victor.s', 'david.reyes@maxikash.mx', 'erika.ortiz@maxikash.mx', 'admin']:
+        return "Acceso no autorizado", 403  # o redirect('/no_autorizado')
 
     resultados = []
     error = None
