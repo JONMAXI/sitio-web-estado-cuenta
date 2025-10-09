@@ -588,10 +588,10 @@ def buscar_base_clientes(nombre_cliente=None, id_credito=None):
     params = []
 
     if nombre_cliente:
-        query += " AND nombre_completo_cliente LIKE %s"
+        query += " AND nombre_completo_cliente LIKE %s ORDER BY base_clientes.fecha_dispositivo"
         params.append(f"%{nombre_cliente}%")
     if id_credito:
-        query += " AND id_credito = %s"
+        query += " AND id_credito = %s ORDER BY base_clientes.fecha_dispositivo"
         params.append(id_credito)
 
     query += " LIMIT 1000"
