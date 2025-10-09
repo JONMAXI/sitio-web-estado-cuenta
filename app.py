@@ -362,12 +362,22 @@ def index():
 
 @app.route('/documentos', methods=['GET', 'POST'])
 def documentos():
+    # Verifica que haya sesión
     if 'usuario' not in session:
         return redirect('/login')
 
-    usuario = session['usuario']['username']
+    # Obtenemos el username directamente (ahora session['usuario'] es string)
+    usuario = session['usuario'].lower()  # minúsculas para comparación
 
-    if usuario in ('sandra.avendano@maxikash.mx', 'amiel.granda@maxikash.mx', 'admin'):
+    # Lista de usuarios con permisos de administrador
+    admins = [
+        'sandra.avendano@maxikash.mx',
+        'amiel.granda@maxikash.mx',
+        'admin'
+    ]
+
+    # Renderiza la plantilla según el tipo de usuario
+    if usuario in admins:
         return render_template("consulta_documentos_admin.html", usuario=usuario)
     else:
         return render_template("consulta_documentos.html", usuario=usuario)
