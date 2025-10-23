@@ -183,17 +183,28 @@
               </tbody>
             </table>
 
-            <!-- DOCUMENTOS Y MULTIMEDIA -->
-            <h5 class="section-title mt-4">Documentos y multimedia</h5>
-            <div class="group">
-              {% if r.images %}
+           <!-- DOCUMENTOS Y MULTIMEDIA -->
+          <h5 class="section-title mt-4">Documentos y multimedia</h5>
+          <div class="group">
+            {% if r.images %}
               <div class="mt-2">
                 <span class="small-muted">
                   Imagen: <a href="{{ r.images }}" target="_blank">{{ r.images }}</a>
                 </span>
               </div>
-              {% endif %}
-            </div>
+            {% endif %}
+
+            {% if r.ubicacion_usuario %}
+              <div class="mt-2">
+                <span class="small-muted">
+                  Ubicación: 
+                  <a href="https://www.google.com/maps?q={{ r.ubicacion_usuario }}" target="_blank">
+                    Ver en mapa
+                  </a>
+                </span>
+              </div>
+            {% endif %}
+          </div>
 
           </div>
         </div>
