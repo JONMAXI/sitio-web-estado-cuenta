@@ -99,13 +99,11 @@
     <div class="text-end">
       <small class="text-secondary">
 
-      {% if session['usuario_nombre']|lower == 'admin' %}
-        <a href="https://catalogo-gestores-601258367060.us-central1.run.app/" 
-           target="_blank" 
-           class="btn btn-outline-info logout-btn">
-          Catálogo Gestores
-        </a>
-      {% endif %}
+        {% if session['usuario_nombre']|lower == 'admin' %}
+          <button type="button" class="btn btn-outline-info logout-btn" data-bs-toggle="modal" data-bs-target="#catalogoModal">
+            Catálogo Gestores
+          </button>
+        {% endif %}
 
 
         {% if session['usuario_nombre']|lower in [
@@ -213,23 +211,22 @@
 
 <!-- Modal Catálogo Gestores -->
 <div class="modal fade" id="catalogoModal" tabindex="-1" aria-labelledby="catalogoModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content">
+  <div class="modal-dialog modal-xl modal-dialog-centered" style="max-width: 95%;">
+    <div class="modal-content" style="height: 90vh;">
+      
       <div class="modal-header">
         <h5 class="modal-title" id="catalogoModalLabel">Catálogo de Gestores</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
 
-      <div class="modal-body">
-        ¿Deseas abrir el catálogo de gestores?
+      <div class="modal-body p-0" style="height: calc(100% - 56px);">
+        <iframe 
+          src="https://catalogo-gestores-601258367060.us-central1.run.app/"
+          style="border:0; width:100%; height:100%;"
+          loading="lazy">
+        </iframe>
       </div>
 
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-        <a href="https://catalogo-gestores-601258367060.us-central1.run.app/" target="_blank" class="btn btn-primary">
-          Abrir Catálogo
-        </a>
-      </div>
     </div>
   </div>
 </div>
