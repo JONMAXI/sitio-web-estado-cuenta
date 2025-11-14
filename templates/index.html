@@ -99,13 +99,6 @@
     <div class="text-end">
       <small class="text-secondary">
 
-        {% if session['usuario_nombre']|lower == 'admin' %}
-          <button type="button" class="btn btn-outline-info logout-btn" data-bs-toggle="modal" data-bs-target="#catalogoModal">
-            Catálogo Gestores
-          </button>
-        {% endif %}
-
-
         {% if session['usuario_nombre']|lower in [
           'denise.azpeita@maxikash.mx',
           'josue.aldrete@maxikash.mx',
@@ -119,6 +112,15 @@
             <span class="fw-bold">S</span>
           </a>
         {% endif %}
+
+        {% if session['usuario_nombre']|lower == 'admin' %}
+          <button type="button" class="btn btn-outline-info logout-btn" data-bs-toggle="modal" data-bs-target="#catalogoModal">
+            Catálogo Gestores
+          </button>
+        {% endif %}
+
+
+        
         <a href="/" class="btn btn-outline-primary logout-btn">Estado de Cuenta</a>
         <a href="/documentos" class="btn btn-outline-primary logout-btn">Documentos</a>
         <a href="/logout" class="btn btn-outline-danger logout-btn">Cerrar sesión</a>
