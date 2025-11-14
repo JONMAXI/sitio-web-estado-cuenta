@@ -113,7 +113,7 @@
           </a>
         {% endif %}
 
-        {% if session['usuario_nombre']|lower == 'admin' %}
+        {% if session['usuario_nombre']|lower in ['admin', 'denise.azpeita@maxikash.mx'] %}
           <button type="button" class="btn btn-outline-info logout-btn" data-bs-toggle="modal" data-bs-target="#catalogoModal">
             Catálogo Gestores
           </button>
