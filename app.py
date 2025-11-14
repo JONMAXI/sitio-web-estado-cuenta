@@ -412,8 +412,8 @@ def descargar(id):
                 return "No se encontró idCliente para este crédito", 404
 
             urls = [
-                f"http://54.167.121.148:8081/s3/downloadS3File?fileName=INE/{idCliente}_frente.jpeg",
-                f"http://54.167.121.148:8081/s3/downloadS3File?fileName=INE/{idCliente}_reverso.jpeg"
+                f"http://98.90.194.116/audit-app-0.0.1-SNAPSHOT_1/s3/downloadS3File?fileName=INE/{idCliente}_frente.jpeg",
+                f"http://98.90.194.116/audit-app-0.0.1-SNAPSHOT_1/s3/downloadS3File?fileName=INE/{idCliente}_reverso.jpeg"
             ]
             imgs = []
             faltantes = []
@@ -448,7 +448,7 @@ def descargar(id):
 
         # ------------------ Factura ------------------
         elif tipo == 'Factura':
-            url = f"http://54.167.121.148:8081/s3/downloadS3File?fileName=FACTURA/{id}_factura.pdf"
+            url = f"http://98.90.194.116/audit-app-0.0.1-SNAPSHOT_1/s3/downloadS3File?fileName=FACTURA/{id}_factura.pdf"
             r = requests.get(url, timeout=10)
             if r.status_code != 200:
                 auditar_documento(usuario, "Factura", "Factura", id, 0, "Archivo Factura no encontrado")
@@ -461,7 +461,7 @@ def descargar(id):
 
         # ------------------ Contrato ------------------
         elif tipo == 'Contrato':
-            url = f"http://54.167.121.148:8081/s3/downloadS3File?fileName=VALIDACIONES/{id}_validaciones.pdf"
+            url = f"http://98.90.194.116/audit-app-0.0.1-SNAPSHOT_1/s3/downloadS3File?fileName=VALIDACIONES/{id}_validaciones.pdf"
             r = requests.get(url, timeout=10)
             if r.status_code != 200:
                 auditar_documento(usuario, "Contrato", "Contrato validaciones", id, 0, "Cliente no encontrado en la Base de Datos")
@@ -517,7 +517,7 @@ def descargar(id):
                 return "El documento no tiene nombre asociado", 404
 
             safe_name = os.path.basename(nombre_archivo)
-            url = f"http://54.167.121.148:8081/s3/downloadS3File?fileName={carpeta_s3}/{urllib.parse.quote(safe_name)}"
+            url = f"http://98.90.194.116/audit-app-0.0.1-SNAPSHOT_1/s3/downloadS3File?fileName={carpeta_s3}/{urllib.parse.quote(safe_name)}"
             r = requests.get(url, timeout=10)
             if r.status_code != 200:
                 auditar_documento(usuario, tipo, tipo, id, 0, f"Archivo {safe_name} no encontrado en S3")
