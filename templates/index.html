@@ -99,12 +99,13 @@
     <div class="text-end">
       <small class="text-secondary">
 
-          {% if session['usuario_nombre']|lower == 'admin' %}
-        <!-- Botón que abre el modal -->
-        <button type="button" class="btn btn-outline-info logout-btn" data-bs-toggle="modal" data-bs-target="#catalogoModal">
+      {% if session['usuario_nombre']|lower == 'admin' %}
+        <a href="https://catalogo-gestores-601258367060.us-central1.run.app/" 
+           target="_blank" 
+           class="btn btn-outline-info logout-btn">
           Catálogo Gestores
-        </button>
-        {% endif %}
+        </a>
+      {% endif %}
 
 
         {% if session['usuario_nombre']|lower in [
