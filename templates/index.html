@@ -239,30 +239,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-  (function() {
-    const IMAGE_URL = '';
-    const mosaic = document.getElementById('mosaic');
-    function getTileSize() { return parseInt(getComputedStyle(document.documentElement).getPropertyValue('--tile-size')) || 180; }
-    function buildGrid() {
-      const tileSize = getTileSize();
-      const gap = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--gap')) || 4;
-      const cols = Math.ceil(window.innerWidth / (tileSize + gap));
-      const rows = Math.ceil(window.innerHeight / (tileSize + gap));
-      mosaic.style.gridTemplateColumns = `repeat(${cols}, minmax(0, 1fr))`;
-      mosaic.innerHTML = '';
-      for (let i = 0; i < cols * rows; i++) {
-        const tile = document.createElement('div');
-        tile.className = 'tile';
-        const img = document.createElement('img');
-        img.src = IMAGE_URL;
-        img.loading = 'lazy';
-        tile.appendChild(img);
-        mosaic.appendChild(tile);
-      }
-    }
-    buildGrid();
-    window.addEventListener('resize', () => { clearTimeout(window._resizeTimer); window._resizeTimer = setTimeout(buildGrid, 150); });
-  })();
+  
 
   const today = new Date();
   const yyyy = today.getFullYear();
