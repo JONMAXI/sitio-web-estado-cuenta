@@ -121,7 +121,10 @@
 
         
         <a href="/" class="btn btn-outline-primary logout-btn">Estado de Cuenta</a>
-        <a href="/documentos" class="btn btn-outline-primary logout-btn">Documentos</a>
+        
+        {% if session['usuario_nombre']|lower not in ['coord.cobranza@gagsedabogados.com.mx', 'eduardosalgado@aserjuridicos.com.mx', ' j.ponce@eypenrecueperacion.com'] %}
+            <a href="/documentos" class="btn btn-outline-primary logout-btn">Documentos</a>
+        {% endif %}
         <a href="/logout" class="btn btn-outline-danger logout-btn">Cerrar sesión</a>
       </small>
     </div>
